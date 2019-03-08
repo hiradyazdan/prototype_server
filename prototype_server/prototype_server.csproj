@@ -6,11 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="LiteNetLib\LiteNetLib.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Content Include="LiteNetLib\LiteNetLib.csproj" />
+      <PackageReference Include="LiteNetLib" Version="0.8.3" />
+      <PackageReference Include="MySql.Data" Version="8.0.15" />
     </ItemGroup>
 
 </Project>
