@@ -7,10 +7,9 @@ using LiteNetLib.Utils;
 
 namespace PrototypeServer
 {
-    class Server : INetEventListener
+    internal class Server : INetEventListener
     {
-
-        public enum NET_DATA_TYPE
+        private enum NET_DATA_TYPE
         {
             PlayerPosition,
             PlayerPositionsArray,
@@ -23,13 +22,13 @@ namespace PrototypeServer
         
         private static void Main(string[] args)
         {
-            Server server = new Server();
+            var server = new Server();
             server.Run();
 
             Console.ReadKey();
         }
 
-        public void Run()
+        private void Run()
         {
             dataWriter = new NetDataWriter();
             networkPlayersDictionary = new Dictionary<long, NetworkPlayer>();
@@ -87,7 +86,7 @@ namespace PrototypeServer
             }
         }
 
-        public void SendPlayerCoords()
+        private void SendPlayerCoords()
         {
             foreach(var (key, value) in networkPlayersDictionary)
             {
@@ -147,27 +146,23 @@ namespace PrototypeServer
                 return;
             }
 
-            if(reader.RawDataSize - 3 == (sizeof(int) + sizeof(float) * 3))
-            {
-                
-                // possibly a position packet.
-                // check for data type
-                NET_DATA_TYPE netDataType = (NET_DATA_TYPE)reader.GetInt();
-                if(netDataType == NET_DATA_TYPE.PlayerPosition)
-                {
-                    float x = reader.GetFloat();
-                    float y = reader.GetFloat();
-                    float z = reader.GetFloat();
+            if (reader.RawDataSize - 3 != (sizeof(int) + sizeof(float) * 3)) return;
+            
+            var netDataType = (NET_DATA_TYPE)reader.GetInt();
+            
+            if (netDataType != NET_DATA_TYPE.PlayerPosition) return;
+            
+            var x = reader.GetFloat();
+            var y = reader.GetFloat();
+            var z = reader.GetFloat();
 
-                    networkPlayersDictionary[peer.Id].x = x;
-                    networkPlayersDictionary[peer.Id].y = y;
-                    networkPlayersDictionary[peer.Id].z = z;
+            networkPlayersDictionary[peer.Id].x = x;
+            networkPlayersDictionary[peer.Id].y = y;
+            networkPlayersDictionary[peer.Id].z = z;
 
-                    Console.WriteLine("[" + peer.Id + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
+            Console.WriteLine("[" + peer.Id + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
 
-                    networkPlayersDictionary[peer.Id].moved = true;
-                }
-            }
+            networkPlayersDictionary[peer.Id].moved = true;
         }
 
         public void OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetPacketReader reader, UnconnectedMessageType messageType)
@@ -182,7 +177,7 @@ namespace PrototypeServer
 
         public void OnConnectionRequest(ConnectionRequest request)
         {
-            int maxConn = 10;
+            const int maxConn = 10;
 
             if (serverNetManager.PeersCount < maxConn)
             {
