@@ -5,3 +5,4 @@ bin/
 *.pdb
 *.dll
 .DS_Store
+appsettings.*.json

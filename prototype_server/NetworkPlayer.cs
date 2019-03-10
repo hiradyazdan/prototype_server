@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using LiteNetLib;
+﻿using LiteNetLib;
 
-namespace PrototypeServer
+namespace prototype_server
 {
     public class NetworkPlayer
     {
