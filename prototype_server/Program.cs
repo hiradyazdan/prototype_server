@@ -1,4 +1,6 @@
 ﻿using System;
+using Microsoft.Extensions.DependencyInjection;
+using prototype_server.DB;
 
 namespace prototype_server
 {
@@ -6,10 +8,11 @@ namespace prototype_server
     {   
         public static void Main(string[] args)
         {
-            var app = new App();
-
+            var resolver = new DependencyResolver();
+            var redisCache = resolver.ServiceProvider.GetRequiredService(typeof(RedisCache)) as RedisCache;
+            var app = new App(redisCache);
+            
             app.Run();
-
             Console.ReadKey();
         }
     }

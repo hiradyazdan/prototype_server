@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using prototype_server.Models;
 
-namespace prototype_server.Models
+namespace prototype_server.DB
 {
     public class GameDbContextFactory : IDesignTimeDbContextFactory<GameDbContext>
     {

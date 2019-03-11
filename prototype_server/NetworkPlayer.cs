@@ -10,6 +10,7 @@ namespace prototype_server
 
         public readonly NetPeer netPeer;
         public bool moved = false;
+        public bool IsLocalPlayer = false;
 
 
         public NetworkPlayer(NetPeer peer)
