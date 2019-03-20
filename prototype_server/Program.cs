@@ -1,19 +1,42 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using prototype_server.DB;
+using System.Threading;
+using LiteNetLib;
 
 namespace prototype_server
 {
-    public class Program
-    {   
+    public static class Program
+    {
         public static void Main(string[] args)
         {
-            var resolver = new DependencyResolver();
-            var redisCache = resolver.ServiceProvider.GetRequiredService(typeof(RedisCache)) as RedisCache;
-            var app = new App(redisCache);
+            var routes = new Routes();
+            var server = new NetManager(routes);
             
-            app.Run();
+            routes.ServerInstance = server;
+            
+            Run(server, routes);
+            
             Console.ReadKey();
+        }
+
+        private static void Run(NetManager server, RoutesBase routes)
+        {
+            if (server.Start(15000))
+            {
+                Console.WriteLine("Server started listening on port 15000");
+            }
+            else
+            {
+                Console.Error.WriteLine("Server could not start!");
+                return;
+            }
+
+            while (server.IsRunning)
+            {
+                server.PollEvents();
+                routes.SyncWithConnectedClients();
+
+                Thread.Sleep(15);
+            }
         }
     }
 }

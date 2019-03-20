@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using prototype_server.DB;
 
-namespace prototype_server.Migrations
+namespace prototype_server.DB.Migrations
 {
     [DbContext(typeof(GameDbContext))]
-    [Migration("20190310122414_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20190321141214_UpdatePlayerAttributes")]
+    partial class UpdatePlayerAttributes
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -22,7 +22,8 @@ namespace prototype_server.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<string>("Name");
+                    b.Property<string>("Name")
+                        .IsRequired();
 
                     b.HasKey("Id");
 

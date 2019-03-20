@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using prototype_server.Config;
 using prototype_server.Models;
 
 namespace prototype_server.DB
@@ -8,8 +9,8 @@ namespace prototype_server.DB
     {
         public GameDbContext CreateDbContext(string[] args)
         {
-            var resolver = new DependencyResolver();
-            return resolver.ServiceProvider.GetService(typeof(GameDbContext)) as GameDbContext;
+            var appConfig = new ServiceConfiguration();
+            return appConfig.ServiceProvider.GetService(typeof(GameDbContext)) as GameDbContext;
         }
     }
     
