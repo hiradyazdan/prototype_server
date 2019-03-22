@@ -18,13 +18,17 @@ namespace prototype_server.Specs
             Configurator.Scanners.DefaultMethodNameStepScanner.Disable();
             Configurator.Scanners.Add(() => new ContextSpecification());
             
-            LoggingEnabled = true;
+            LoggingEnabled = false;
+
+            var reportsDir = Path.GetDirectoryName(GetType().GetTypeInfo().Assembly.Location) + "/Reports";
+            
+            Directory.CreateDirectory(reportsDir);
             
             HtmlReport.ReportHeader = "Prototype Game Server";
             HtmlReport.ReportDescription = "Feature Specs";
             HtmlReport.ReportType = HtmlReportConfiguration.HtmlReportType.Classic;
-            HtmlReport.OutputPath = Path.GetDirectoryName(GetType().GetTypeInfo().Assembly.Location);
-            HtmlReport.OutputFileName = "report.html";
+            HtmlReport.OutputPath = reportsDir;
+            HtmlReport.OutputFileName = "specs-report.html";
             
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
