@@ -17,8 +17,8 @@ namespace prototype_server.DB
     public class GameDbContext : DbContext
     {
         public GameDbContext(DbContextOptions options) : base(options)
-        { }
+        {}
 
-        public DbSet<Player> Player { get; set; }
+        public DbSet<Player> Players { get; set; }
     }
 }

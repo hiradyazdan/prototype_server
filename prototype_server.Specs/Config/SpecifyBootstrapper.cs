@@ -1,11 +1,12 @@
 using System.IO;
 using System.Reflection;
-using Specify.Configuration;
-using TinyIoC;
 using Serilog;
+using Specify;
+using Specify.Configuration;
 using TestStack.BDDfy.Configuration;
+using TinyIoC;
 
-namespace prototype_server.Specs
+namespace prototype_server.Specs.Config
 {
     /// <summary>
     /// The startup class to configure Specify with the default TinyIoc container. 
@@ -42,6 +43,24 @@ namespace prototype_server.Specs
         /// </summary>
         /// <param name="container">The <see cref="TinyIoCContainer"/> container.</param>
         public override void ConfigureContainer(TinyIoCContainer container)
+        {
+        }
+    }
+    
+    public interface IPerScenarioActions
+    {
+        void Before(IContainer container);
+        void After();
+    }
+    
+    public class ResetDatabaseAction : IPerScenarioActions
+    {
+        public void Before(IContainer container)
+        {
+            
+        }
+
+        public void After()
         {
         }
     }

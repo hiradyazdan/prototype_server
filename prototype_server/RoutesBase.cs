@@ -1,6 +1,11 @@
 using System.Net;
 using System.Net.Sockets;
-using LiteNetLib;
+
+#if DEBUG
+    using prototype_server.Libs.LiteNetLib;
+#else
+    using LiteNetLib;
+#endif
 
 namespace prototype_server
 {

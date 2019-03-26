@@ -1,8 +1,16 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using LiteNetLib;
+using Microsoft.Extensions.DependencyInjection;
+using prototype_server.Config;
 using prototype_server.Controllers;
+using prototype_server.DB;
+
+#if DEBUG
+    using prototype_server.Libs.LiteNetLib;
+#else
+    using LiteNetLib;
+#endif
 
 namespace prototype_server
 {
@@ -14,7 +22,11 @@ namespace prototype_server
         
         public Routes()
         {
-            _playerCtrl = new PlayerController();
+            var svcConfig = new ServiceConfiguration();
+            var scope = svcConfig.ServiceProvider.CreateScope();
+            var redisCache = svcConfig.ServiceProvider.GetRequiredService<RedisCache>();
+            
+            _playerCtrl = new PlayerController(scope, redisCache);
         }
 
         public override void OnPeerConnected(NetPeer peer)

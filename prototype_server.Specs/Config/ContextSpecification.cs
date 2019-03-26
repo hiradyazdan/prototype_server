@@ -1,7 +1,7 @@
 using System;
 using TestStack.BDDfy;
 
-namespace prototype_server.Specs
+namespace prototype_server.Specs.Config
 {
     public class ContextSpecification : MethodNameStepScanner
     {

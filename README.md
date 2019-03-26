@@ -22,7 +22,7 @@ dotnet ef database update
 #### Run
 
 ```shell
-dotnet test /p:AltCover=true /p:AltCoverXmlreport="bin/Debug/netcoreapp2.2/Reports/coverage.xml" /p:AltCoverAssemblyFilter="NUnit|Specs"
+dotnet test /p:AltCover=true /p:AltCoverXmlreport="bin/Debug/netcoreapp2.2/Reports/coverage.xml" /p:AltCoverAssemblyExcludeFilter="NUnit|Specs"  /p:AltCoverPathFilter=Libs
 ```
 
 

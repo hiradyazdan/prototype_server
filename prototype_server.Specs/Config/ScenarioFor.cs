@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Story = Specify.Stories.Story;
 
-namespace prototype_server.Specs
+namespace prototype_server.Specs.Config
 {
     /// <summary>
     /// The base class for scenarios without a story (normally unit test scenarios).

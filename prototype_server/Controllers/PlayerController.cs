@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
-using LiteNetLib;
 using Microsoft.Extensions.DependencyInjection;
 using prototype_server.DB;
 using prototype_server.Models;
 
+#if DEBUG
+    using prototype_server.Libs.LiteNetLib;
+#else
+    using LiteNetLib;
+#endif
+
 namespace prototype_server.Controllers
-{
+{   
     public class PlayerController : ApplicationController
     {   
         private enum NET_DATA_TYPE
@@ -18,17 +23,10 @@ namespace prototype_server.Controllers
         private readonly IRepository<Player> _playerModel;
         private readonly Dictionary<long, Player> _playersDictionary;
 
-        public PlayerController()
+        public PlayerController(IServiceScope scope, RedisCache redis) : base(scope, redis)
         {
-            _playerModel = Scope.ServiceProvider.GetService<IRepository<Player>>();
+            _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
             _playersDictionary = new Dictionary<long, Player>();
-        }
-
-        public void SyncWithConnectedClients()
-        {
-            if (_playersDictionary.Count == 0) return;
-            
-            SendPlayersCoords();
         }
         
         private void SyncPlayersCoordsWithClient(NetPeer peer, long peerId = -1, bool onPeerConnected = true)
@@ -68,8 +66,10 @@ namespace prototype_server.Controllers
             }
         }
 
-        private void SendPlayersCoords()
-        {            
+        public void SyncWithConnectedClients()
+        {
+            if (_playersDictionary.Count == 0) return;
+            
             foreach(var (peerId, player) in _playersDictionary)
             {
                 if(player == null)
@@ -103,8 +103,8 @@ namespace prototype_server.Controllers
 
                 _playersDictionary.Add(peer.Id, newPlayer);
             }
-            
-            var cache = RedisCache.GetCache($"{peer.Id}");
+
+            var cache = Redis.GetCache($"{peer.Id}");
             
             if (cache != null)
             {
@@ -144,7 +144,7 @@ namespace prototype_server.Controllers
             
             float[] coords = { player.X, player.Y, player.Z };
             
-            RedisCache.SetCache($"{peer.Id}", string.Join(",", coords));
+            Redis.SetCache($"{peer.Id}", string.Join(",", coords));
             
             _playersDictionary.Remove(peer.Id);
         }
