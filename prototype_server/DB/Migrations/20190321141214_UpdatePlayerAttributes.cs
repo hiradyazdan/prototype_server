@@ -8,7 +8,7 @@ namespace prototype_server.DB.Migrations
         {
             migrationBuilder.AlterColumn<string>(
                 name: "Name",
-                table: "Player",
+                table: "Players",
                 nullable: false,
                 oldClrType: typeof(string),
                 oldNullable: true);
@@ -18,7 +18,7 @@ namespace prototype_server.DB.Migrations
         {
             migrationBuilder.AlterColumn<string>(
                 name: "Name",
-                table: "Player",
+                table: "Players",
                 nullable: true,
                 oldClrType: typeof(string));
         }

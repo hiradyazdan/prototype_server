@@ -26,7 +26,7 @@ namespace prototype_server.DB.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Player");
+                    b.ToTable("Players");
                 });
 #pragma warning restore 612, 618
         }
