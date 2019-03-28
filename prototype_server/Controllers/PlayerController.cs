@@ -29,12 +29,23 @@ namespace prototype_server.Controllers
             _playersDictionary = new Dictionary<long, Player>();
         }
         
-        private void SyncPlayersCoordsWithClient(NetPeer peer, long peerId = -1, bool onPeerConnected = true)
+        private void ResetPlayersStatus()
+        {
+            foreach(var (_, player) in _playersDictionary)
+            {
+                player.IsLocalPlayer = false;
+                player.Moved = false;
+            }
+        }
+        
+        private void SyncWithConnectedClient(NetPeer peer, long peerId = -1, bool onPeerConnected = true)
         {
             var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced;
             var playerMoved = false;
             
             DataWriter.Reset();
+            Array.Clear(DataWriter.Data, 0, DataWriter.Data.Length);
+            
             DataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
             
             foreach (var (key, player) in _playersDictionary)
@@ -72,19 +83,16 @@ namespace prototype_server.Controllers
             
             foreach(var (peerId, player) in _playersDictionary)
             {
+                // TODO: Will there be a null player in the dictionary at all?
                 if(player == null)
                 {
                     continue;
                 }
 
-                SyncPlayersCoordsWithClient(player.Peer, peerId, false);
+                SyncWithConnectedClient(player.Peer, peerId, false);
             }
 
-            foreach(var (_, player) in _playersDictionary)
-            {
-                player.IsLocalPlayer = false;
-                player.Moved = false;
-            }
+            ResetPlayersStatus();
         }
 
         public void OnPeerConnected(NetPeer peer)
@@ -119,10 +127,9 @@ namespace prototype_server.Controllers
                 _playersDictionary[peer.Id].Z = coords[2];
             }
             
-            _playersDictionary[peer.Id].Moved = true;
             _playersDictionary[peer.Id].IsLocalPlayer = true;
             
-            SyncPlayersCoordsWithClient(peer);
+            SyncWithConnectedClient(peer);
 
             if (cache != null) return;
             
@@ -138,6 +145,7 @@ namespace prototype_server.Controllers
                 " - Reason: " + disconnectInfo.Reason
             );
 
+            // Why checking this?!
             if (!_playersDictionary.ContainsKey(peer.Id)) return;
 
             var player = _playersDictionary[peer.Id];
@@ -151,9 +159,11 @@ namespace prototype_server.Controllers
 
         public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
         {
+            const int deliveryMethodHeaderSize = 3;
+            
+            // Not sure if there's any point for this as it will always be a byte[] with some size
             if(reader.RawData == null) return;
-
-            if (reader.RawDataSize - 3 != sizeof(int) + sizeof(bool) + sizeof(float) * 3) return;
+            if (reader.RawDataSize - deliveryMethodHeaderSize != sizeof(int) + sizeof(bool) + sizeof(float) * 3) return;
             
             var netDataType = (NET_DATA_TYPE)reader.GetInt();
             

@@ -11,12 +11,12 @@ namespace prototype_server.Libs.LiteNetLib.Utils
         protected int _dataSize;
         private int _offset;
 
-        public byte[] RawData
+        public virtual byte[] RawData
         {
             get { return _data; }
         }
 
-        public int RawDataSize
+        public virtual int RawDataSize
         {
             get { return _dataSize; }
         }
@@ -257,7 +257,7 @@ namespace prototype_server.Libs.LiteNetLib.Utils
             return arr;
         }
 
-        public bool GetBool()
+        public virtual bool GetBool()
         {
             bool res = _data[_position] > 0;
             _position += 1;
@@ -299,7 +299,7 @@ namespace prototype_server.Libs.LiteNetLib.Utils
             return result;
         }
 
-        public int GetInt()
+        public virtual int GetInt()
         {
             int result = BitConverter.ToInt32(_data, _position);
             _position += 4;
@@ -313,7 +313,7 @@ namespace prototype_server.Libs.LiteNetLib.Utils
             return result;
         }
 
-        public float GetFloat()
+        public virtual float GetFloat()
         {
             float result = BitConverter.ToSingle(_data, _position);
             _position += 4;

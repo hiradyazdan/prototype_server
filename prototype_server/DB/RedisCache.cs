@@ -4,22 +4,29 @@ using StackExchange.Redis;
 
 namespace prototype_server.DB
 {
-    public class RedisCache
+    public interface IRedisCache
     {
-        private static IDatabase _cache;
+        string GetCache(string key);
+        void SetCache(string key, string value);
+        void RemoveCache(string key);
+    }
+    
+    public class RedisCache : IRedisCache
+    {
+        protected static IDatabase Cache;
         
         public RedisCache(string connectionString)
         {
             var connection = new Lazy<ConnectionMultiplexer>(() => ConnectionMultiplexer.Connect(connectionString));
  
-            _cache = connection.Value.GetDatabase();
+            Cache = connection.Value.GetDatabase();
         }
  
-        public string GetCache(string key)
+        public virtual string GetCache(string key)
         {            
             try
             {
-                return _cache.StringGet(key);
+                return Cache.StringGet(key);
             }
             catch (KeyNotFoundException exc)
             {
@@ -28,16 +35,16 @@ namespace prototype_server.DB
             }
         }
  
-        public void SetCache(string key, string value)
+        public virtual void SetCache(string key, string value)
         {            
-            _cache.StringSet(key, value);
+            Cache.StringSet(key, value);
         }
  
-        public void RemoveCache(string key)
+        public virtual void RemoveCache(string key)
         {
             try
             {
-                _cache.KeyDelete(key);
+                Cache.KeyDelete(key);
             }
             catch (KeyNotFoundException exc)
             {

@@ -13,12 +13,15 @@ using prototype_server.Libs.LiteNetLib.Utils;
 
 namespace prototype_server.Libs.LiteNetLib
 {
-    public sealed class NetPacketReader : NetDataReader
+    public class NetPacketReader : NetDataReader
     {
         private NetPacket _packet;
         private readonly NetManager _manager;
         private readonly NetEvent _evt;
 
+        public NetPacketReader()
+        {}
+        
         internal NetPacketReader(NetManager manager, NetEvent evt)
         {
             _manager = manager;
