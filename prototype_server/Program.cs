@@ -38,7 +38,7 @@ namespace prototype_server
             while (server.IsRunning)
             {
                 server.PollEvents();
-                routes.SyncWithConnectedClients();
+                routes.SyncWithConnectedPeers();
 
                 Thread.Sleep(15);
             }

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Net;
 using FluentAssertions;
@@ -26,6 +27,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         private RedisCache _redisCache;
         private Player _playerMock;
         private NetPeer _peerMock;
+        private long _peerId;
 
         private static DbSet<T> GetQueryableMockDbSet<T>(params T[] sourceList) where T : class
         {
@@ -52,7 +54,9 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 Z = 42.5f
             };
             
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, 192168017, 15000).Object;
+            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var dbContextMock = new Mock<GameDbContext>();
             var playerDbSetMock = GetQueryableMockDbSet(_playerMock);
@@ -73,6 +77,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                       .Returns(_playerMock.Y)
                       .Returns(_playerMock.Z);
             
+            _peerId = peerEndpointMock;
             _peerMock = new Mock<NetPeer>(MockBehavior.Loose, ipEndpointMock, 0).Object;
             
             dbContextMock.Setup(m => m.Set<Player>()).Returns(playerDbSetMock);
@@ -91,14 +96,12 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         
         private void ItShouldSyncGameStateWithAllConnectedClients()
         {
-            _subject.SyncWithConnectedClients();
+            _subject.SyncWithConnectedPeers();
 
             var dataWriter = new NetDataWriter();
-            
-            const long key = 0;
 
             dataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
-            dataWriter.Put(key);
+            dataWriter.Put(_peerId);
             dataWriter.Put(_playerMock.IsLocalPlayer);
             dataWriter.Put(_playerMock.X);
             dataWriter.Put(_playerMock.Y);
@@ -140,7 +143,9 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 Z = 42.5f
             };
             
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, 192168017, 15000).Object;
+            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var dbContextMock = new Mock<GameDbContext>();
             var playerDbSetMock = GetQueryableMockDbSet(_playerMock);
@@ -172,7 +177,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 
         private void ItShouldNotSyncGameStateWithAnyClients()
         {
-            _subject.SyncWithConnectedClients();
+            _subject.SyncWithConnectedPeers();
             
             var dataWriter = new NetDataWriter();
 
@@ -214,7 +219,9 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 Z = 42.5f
             };
             
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, 192168017, 15000).Object;
+            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var dbContextMock = new Mock<GameDbContext>();
             var playerDbSetMock = GetQueryableMockDbSet(_playerMock);
@@ -248,7 +255,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 
         private void ItShouldNotSyncMoveStateWithAnyClients()
         {
-            _subject.SyncWithConnectedClients();
+            _subject.SyncWithConnectedPeers();
             
             var dataWriter = new NetDataWriter();
 

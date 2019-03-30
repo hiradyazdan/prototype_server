@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Net;
 using FluentAssertions;
@@ -24,18 +25,22 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         private PlayerController _subject;
         private ModelRepository<Player> _playerModelRepo;
         private NetPeer _peerMock;
+        private long _peerId;
 
         private void EstablishContext()
         {
             var dbCtxOptions = new DbContextOptionsBuilder<GameDbContext>()
-                .UseInMemoryDatabase(databaseName: "game_db")
+                .UseInMemoryDatabase(databaseName: "game_db_test")
                 .Options;
             
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, 192168017, 15000).Object;
+            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var redisCacheMock = new Mock<RedisCache>(MockBehavior.Loose, "localhost").Object;
             var dbContext = new GameDbContext(dbCtxOptions);
-            
+
+            _peerId = peerEndpointMock;
             _playerModelRepo = new ModelRepository<Player>(dbContext);
             _peerMock = new Mock<NetPeer>(MockBehavior.Loose, ipEndpointMock, 0).Object;
             
@@ -49,7 +54,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 
         private void ItShouldReceiveInitialGameState()
         {    
-            const long key = 0;
             const bool isLocalPlayer = true;
             const float x = 0.0f;
             const float y = 0.0f;
@@ -58,13 +62,13 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             var dataWriter = new NetDataWriter();
 
             dataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
-            dataWriter.Put(key);
+            dataWriter.Put(_peerId);
             dataWriter.Put(isLocalPlayer);
             dataWriter.Put(x);
             dataWriter.Put(y);
             dataWriter.Put(z);
             
-            _subject.DataWriter.Data.Should().Equal(dataWriter.Data);
+            _subject.DataWriter.Data.Should().BeEquivalentTo(dataWriter.Data);
         }
 
         private void ItShouldCreateARecordInDatabase()
@@ -73,7 +77,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         }
     }
     
-        public class WhenPlayerGetsConnectedAgain : ScenarioFor<PlayerController>
+    public class WhenPlayerGetsConnectedAgain : ScenarioFor<PlayerController>
     {
         private enum NET_DATA_TYPE
         {
@@ -84,6 +88,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         private PlayerController _subject;
         private ModelRepository<Player> _playerModelRepo;
         private NetPeer _peerMock;
+        private long _peerId;
 
         private static DbSet<T> GetQueryableMockDbSet<T>(params T[] sourceList) where T : class
         {
@@ -104,7 +109,9 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 .UseInMemoryDatabase(databaseName: "game_db_test")
                 .Options;
             
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, 192168017, 15000).Object;
+            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var redisCacheMock = new Mock<RedisCache>(MockBehavior.Loose, "localhost");
             var dbContext = new Mock<GameDbContext>(dbCtxOptions);
@@ -114,14 +121,15 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 );
 
             dbContext.Setup(m => m.Set<Player>()).Returns(playerDbSetMock);
-            
+
+            _peerId = peerEndpointMock;
             _playerModelRepo = new ModelRepository<Player>(dbContext.Object);
             _peerMock = new Mock<NetPeer>(MockBehavior.Loose, ipEndpointMock, 0).Object;
             
             scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
                 .Returns(_playerModelRepo);
             
-            redisCacheMock.Setup(m => m.GetCache(_peerMock.Id.ToString())).Returns("10.3,30.3,42.5");
+            redisCacheMock.Setup(m => m.GetCache(_peerId.ToString())).Returns("10.3,30.3,42.5");
 
             _subject = new PlayerController(scopeMock.Object, redisCacheMock.Object);
             
@@ -130,7 +138,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 
         private void ItShouldRetrieveItsLastGameStateFromRedis()
         {
-            const long key = 0;
             const bool isLocalPlayer = true;
             const float x = 10.3f;
             const float y = 30.3f;
@@ -139,13 +146,13 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             var dataWriter = new NetDataWriter();
 
             dataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
-            dataWriter.Put(key);
+            dataWriter.Put(_peerId);
             dataWriter.Put(isLocalPlayer);
             dataWriter.Put(x);
             dataWriter.Put(y);
             dataWriter.Put(z);
             
-            _subject.DataWriter.Data.Should().Equal(dataWriter.Data);
+            _subject.DataWriter.Data.Should().BeEquivalentTo(dataWriter.Data);
         }
 
         private void ItShouldNotCreateAnotherRecordInDatabase()

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Net;
 using FluentAssertions;
@@ -19,6 +20,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         private RedisCacheAdapter _redisCacheAdapter;
         private Player _playerMock;
         private NetPeer _peerMock;
+        private long _peerId;
 
         private static DbSet<T> GetQueryableMockDbSet<T>(params T[] sourceList) where T : class
         {
@@ -43,8 +45,10 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 Z = 42.5f
             };
             
+            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            
             var disconnectInfo = new DisconnectInfo();
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, 192168017, 15000).Object;
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var dbContextMock = new Mock<GameDbContext>();
             var playerDbSetMock = GetQueryableMockDbSet(_playerMock);
@@ -74,6 +78,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             
             var peerMock = new Mock<NetPeer>(MockBehavior.Loose, ipEndpointMock, 0);
 
+            _peerId = peerEndpointMock;
             _peerMock = peerMock.Object;
             
             _redisCacheAdapter = new RedisCacheAdapter("localhost");
@@ -89,7 +94,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 
         private void ItShouldStoreItsLastGameStateToRedis()
         {
-            _redisCacheAdapter.GetCache(_peerMock.Id.ToString()).Should().Be("10.3,30.3,42.5");
+            _redisCacheAdapter.GetCache(_peerId.ToString()).Should().Be("10.3,30.3,42.5");
         }
     }
 }

@@ -19,6 +19,6 @@ namespace prototype_server
             UnconnectedMessageType messageType);
         public abstract void OnNetworkLatencyUpdate(NetPeer peer, int latency);
         public abstract void OnConnectionRequest(ConnectionRequest request);
-        public abstract void SyncWithConnectedClients();
+        public abstract void SyncWithConnectedPeers();
     }
 }

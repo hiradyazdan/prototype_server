@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using prototype_server.DB;
 using prototype_server.Models;
@@ -38,31 +39,32 @@ namespace prototype_server.Controllers
             }
         }
         
-        private void SyncWithConnectedClient(NetPeer peer, long peerId = -1, bool onPeerConnected = true)
+        private void SyncWithConnectedPeer(NetPeer connectedPeer, bool onPeerConnected = true)
         {
             var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced;
             var playerMoved = false;
+            
+            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{connectedPeer.EndPoint.Address}").GetAddressBytes(), 0);
             
             DataWriter.Reset();
             Array.Clear(DataWriter.Data, 0, DataWriter.Data.Length);
             
             DataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
             
-            foreach (var (key, player) in _playersDictionary)
+            foreach (var (_, player) in _playersDictionary)
             {
-                if (!onPeerConnected)
+                long playerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{player.Peer.EndPoint.Address}").GetAddressBytes(), 0);
+                
+                player.IsLocalPlayer = playerEndpoint == peerEndpoint;
+
+                if (!onPeerConnected) // non-eventful sync (loop sync)
                 {
-                    if(!player.Moved)
-                    {
-                        continue;
-                    }
-                    
-                    player.IsLocalPlayer = key == peerId;
+                    if (player.IsLocalPlayer && !player.Moved) continue;
                     
                     playerMoved = true;
                 }
                 
-                DataWriter.Put(key);
+                DataWriter.Put(playerEndpoint);
                 
                 DataWriter.Put(player.IsLocalPlayer);
                 
@@ -72,16 +74,16 @@ namespace prototype_server.Controllers
             }
             
             if (onPeerConnected || playerMoved)
-            {   
-                peer.Send(DataWriter, deliveryMethod);
+            {
+                connectedPeer.Send(DataWriter, deliveryMethod);
             }
         }
 
-        public void SyncWithConnectedClients()
+        public void SyncWithConnectedPeers()
         {
             if (_playersDictionary.Count == 0) return;
             
-            foreach(var (peerId, player) in _playersDictionary)
+            foreach(var (_, player) in _playersDictionary)
             {
                 // TODO: Will there be a null player in the dictionary at all?
                 if(player == null)
@@ -89,7 +91,7 @@ namespace prototype_server.Controllers
                     continue;
                 }
 
-                SyncWithConnectedClient(player.Peer, peerId, false);
+                SyncWithConnectedPeer(player.Peer, false);
             }
 
             ResetPlayersStatus();
@@ -100,36 +102,39 @@ namespace prototype_server.Controllers
 #if DEBUG
             Console.WriteLine("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
 #endif
+            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes(), 0);
+
             Player newPlayer = null;
             
-            if (!_playersDictionary.ContainsKey(peer.Id))
+            if (!_playersDictionary.ContainsKey(peerEndpoint))
             {
                 newPlayer = new Player(peer)
                 {
-                    Name = "user_" + new Random().Next(10000, 20000)
+                    Name = "user_" + peerEndpoint
                 };
 
-                _playersDictionary.Add(peer.Id, newPlayer);
+                _playersDictionary.Add(peerEndpoint, newPlayer);
             }
-
-            var cache = Redis.GetCache($"{peer.Id}");
             
+            var cache = Redis.GetCache($"{peerEndpoint}");
+
             if (cache != null)
             {
 #if DEBUG
                 Console.WriteLine("Hit Cache");
-#endif          
+#endif
                 var strArr = cache.Split(',', StringSplitOptions.RemoveEmptyEntries);
                 var coords = Array.ConvertAll(strArr, float.Parse);
-                
-                _playersDictionary[peer.Id].X = coords[0];
-                _playersDictionary[peer.Id].Y = coords[1];
-                _playersDictionary[peer.Id].Z = coords[2];
+
+                _playersDictionary[peerEndpoint].X = coords[0];
+                _playersDictionary[peerEndpoint].Y = coords[1];
+                _playersDictionary[peerEndpoint].Z = coords[2];
             }
+
+            _playersDictionary[peerEndpoint].IsLocalPlayer = true;
             
-            _playersDictionary[peer.Id].IsLocalPlayer = true;
-            
-            SyncWithConnectedClient(peer);
+            // Sync with local client
+            SyncWithConnectedPeer(peer);
 
             if (cache != null) return;
             
@@ -144,17 +149,19 @@ namespace prototype_server.Controllers
                 peer.EndPoint.Port + 
                 " - Reason: " + disconnectInfo.Reason
             );
+            
+            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes(), 0);
 
             // Why checking this?!
-            if (!_playersDictionary.ContainsKey(peer.Id)) return;
+            if (!_playersDictionary.ContainsKey(peerEndpoint)) return;
 
-            var player = _playersDictionary[peer.Id];
+            var player = _playersDictionary[peerEndpoint];
             
             float[] coords = { player.X, player.Y, player.Z };
             
-            Redis.SetCache($"{peer.Id}", string.Join(",", coords));
+            Redis.SetCache($"{peerEndpoint}", string.Join(",", coords));
             
-            _playersDictionary.Remove(peer.Id);
+            _playersDictionary.Remove(peerEndpoint);
         }
 
         public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
@@ -175,15 +182,17 @@ namespace prototype_server.Controllers
             var y = reader.GetFloat();
             var z = reader.GetFloat();
 
-            _playersDictionary[peer.Id].IsLocalPlayer = isLocalPlayer;
+            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes(), 0);
             
-            _playersDictionary[peer.Id].X = x;
-            _playersDictionary[peer.Id].Y = y;
-            _playersDictionary[peer.Id].Z = z;
+            _playersDictionary[peerEndpoint].IsLocalPlayer = isLocalPlayer;
+            
+            _playersDictionary[peerEndpoint].X = x;
+            _playersDictionary[peerEndpoint].Y = y;
+            _playersDictionary[peerEndpoint].Z = z;
 
-            Console.WriteLine(netDataType + " [" + peer.Id + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
+            Console.WriteLine(netDataType + " [" + peerEndpoint + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
 
-            _playersDictionary[peer.Id].Moved = true;
+            _playersDictionary[peerEndpoint].Moved = true;
         }
     }
 }

@@ -73,9 +73,9 @@ namespace prototype_server
             }
         }
 
-        public override void SyncWithConnectedClients()
+        public override void SyncWithConnectedPeers()
         {
-            _playerCtrl.SyncWithConnectedClients();
+            _playerCtrl.SyncWithConnectedPeers();
         }
     }
 }
