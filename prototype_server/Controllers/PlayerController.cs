@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using prototype_server.DB;
@@ -22,12 +23,12 @@ namespace prototype_server.Controllers
         }
 
         private readonly IRepository<Player> _playerModel;
-        private readonly Dictionary<long, Player> _playersDictionary;
+        private readonly Dictionary<Guid, Player> _playersDictionary;
 
         public PlayerController(IServiceScope scope, RedisCache redis) : base(scope, redis)
         {
             _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
-            _playersDictionary = new Dictionary<long, Player>();
+            _playersDictionary = new Dictionary<Guid, Player>();
         }
         
         private void ResetPlayersStatus()
@@ -102,21 +103,27 @@ namespace prototype_server.Controllers
 #if DEBUG
             Console.WriteLine("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
 #endif
-            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes(), 0);
+            var peerEndpointBytes = IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes();
+
+            // GUID is exactly 16 bytes or and 36 character in length
+            // IP address max size is 16 bytes,
+            // therefore the generated guid size won't ever be more than 16 bytes
+            var playerGuid = ConvertBytesToGuid(peerEndpointBytes);
 
             Player newPlayer = null;
             
-            if (!_playersDictionary.ContainsKey(peerEndpoint))
+            if (!_playersDictionary.ContainsKey(playerGuid))
             {
                 newPlayer = new Player(peer)
                 {
-                    Name = "user_" + peerEndpoint
+                    GUID = playerGuid,
+                    Name = "user_" + new Random().Next(10000, 100000)
                 };
 
-                _playersDictionary.Add(peerEndpoint, newPlayer);
+                _playersDictionary.Add(playerGuid, newPlayer);
             }
             
-            var cache = Redis.GetCache($"{peerEndpoint}");
+            var cache = Redis.GetCache($"{playerGuid}");
 
             if (cache != null)
             {
@@ -126,12 +133,12 @@ namespace prototype_server.Controllers
                 var strArr = cache.Split(',', StringSplitOptions.RemoveEmptyEntries);
                 var coords = Array.ConvertAll(strArr, float.Parse);
 
-                _playersDictionary[peerEndpoint].X = coords[0];
-                _playersDictionary[peerEndpoint].Y = coords[1];
-                _playersDictionary[peerEndpoint].Z = coords[2];
+                _playersDictionary[playerGuid].X = coords[0];
+                _playersDictionary[playerGuid].Y = coords[1];
+                _playersDictionary[playerGuid].Z = coords[2];
             }
 
-            _playersDictionary[peerEndpoint].IsLocalPlayer = true;
+            _playersDictionary[playerGuid].IsLocalPlayer = true;
             
             // Sync with local client
             SyncWithConnectedPeer(peer);
@@ -150,18 +157,23 @@ namespace prototype_server.Controllers
                 " - Reason: " + disconnectInfo.Reason
             );
             
-            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes(), 0);
+            var peerEndpointBytes = IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes();
+            
+            // GUID is exactly 16 bytes or and 36 character in length
+            // IP address max size is 16 bytes,
+            // therefore the generated guid size won't ever be more than 16 bytes
+            var playerGuid = ConvertBytesToGuid(peerEndpointBytes);
 
             // Why checking this?!
-            if (!_playersDictionary.ContainsKey(peerEndpoint)) return;
+            if (!_playersDictionary.ContainsKey(playerGuid)) return;
 
-            var player = _playersDictionary[peerEndpoint];
+            var player = _playersDictionary[playerGuid];
             
             float[] coords = { player.X, player.Y, player.Z };
             
-            Redis.SetCache($"{peerEndpoint}", string.Join(",", coords));
+            Redis.SetCache($"{playerGuid}", string.Join(",", coords));
             
-            _playersDictionary.Remove(peerEndpoint);
+            _playersDictionary.Remove(playerGuid);
         }
 
         public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
@@ -181,18 +193,23 @@ namespace prototype_server.Controllers
             var x = reader.GetFloat();
             var y = reader.GetFloat();
             var z = reader.GetFloat();
-
-            long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes(), 0);
             
-            _playersDictionary[peerEndpoint].IsLocalPlayer = isLocalPlayer;
+            var peerEndpointBytes = IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes();
             
-            _playersDictionary[peerEndpoint].X = x;
-            _playersDictionary[peerEndpoint].Y = y;
-            _playersDictionary[peerEndpoint].Z = z;
+            // GUID is exactly 16 bytes or and 36 character in length
+            // IP address max size is 16 bytes,
+            // therefore the generated guid size won't ever be more than 16 bytes
+            var playerGuid = ConvertBytesToGuid(peerEndpointBytes);
+            
+            _playersDictionary[playerGuid].IsLocalPlayer = isLocalPlayer;
+            
+            _playersDictionary[playerGuid].X = x;
+            _playersDictionary[playerGuid].Y = y;
+            _playersDictionary[playerGuid].Z = z;
 
-            Console.WriteLine(netDataType + " [" + peerEndpoint + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
+            Console.WriteLine(netDataType + " [" + playerGuid + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
 
-            _playersDictionary[peerEndpoint].Moved = true;
+            _playersDictionary[playerGuid].Moved = true;
         }
     }
 }

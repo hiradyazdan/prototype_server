@@ -11,8 +11,8 @@ namespace prototype_server.DB
         IEnumerable<T> GetAll();
         T Get(long id);
         void Create(T model, bool async = false);
-        void Update(T model);
-        void Delete(T model);
+        void Update(T model, bool async = false);
+        void Delete(T model, bool async = false);
     }
     
     public class ModelRepository<T> : IRepository<T> where T : _BaseModel 
@@ -41,35 +41,51 @@ namespace prototype_server.DB
             if (model == null) {
                 throw new ArgumentNullException(nameof(model));
             }
+            
+            _models.Add(model);
 
             if (!async)
             {
-                _models.Add(model);
+                _context.SaveChanges();
             }
             else
             {
-                _models.AddAsync(model);
+                _context?.SaveChangesAsync();
             }
-            
-            _context.SaveChanges();
         }
         
-        public void Update(T model) {
+        public void Update(T model, bool async = false) {
             if (model == null) {
                 throw new ArgumentNullException(nameof(model));
             }
 
             _models.Update(model);
-            _context.SaveChanges();
+            
+            if (!async)
+            {
+                _context.SaveChanges();
+            }
+            else
+            {
+                _context?.SaveChangesAsync();
+            }
         }
         
-        public void Delete(T model) {
+        public void Delete(T model, bool async = false) {
             if (model == null) {
                 throw new ArgumentNullException(nameof(model));
             }
             
             _models.Remove(model);
-            _context.SaveChanges();
+            
+            if (!async)
+            {
+                _context.SaveChanges();
+            }
+            else
+            {
+                _context?.SaveChangesAsync();
+            }
         }
     }
 }

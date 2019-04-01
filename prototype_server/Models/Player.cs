@@ -1,5 +1,6 @@
+using System;
 using System.ComponentModel.DataAnnotations;
-
+using System.ComponentModel.DataAnnotations.Schema;
 #if DEBUG
     using prototype_server.Libs.LiteNetLib;
 #else
@@ -9,7 +10,10 @@ using System.ComponentModel.DataAnnotations;
 namespace prototype_server.Models
 {
     public class Player : _BaseModel
-    {        
+    {
+        [Required]
+        public Guid GUID { get; set; }
+        
         [Required]
         public string Name { get; set; }
         

@@ -11,6 +11,7 @@ using prototype_server.Libs.LiteNetLib;
 using prototype_server.Libs.LiteNetLib.Utils;
 using prototype_server.Models;
 using prototype_server.Specs.Config;
+using prototype_server.Specs.Config.Utils;
 
 namespace prototype_server.Specs.Controllers.PlayerCtrl
 {
@@ -109,15 +110,22 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 .UseInMemoryDatabase(databaseName: "game_db_test")
                 .Options;
             
-            var peerEndpointMock = BitConverter.ToUInt32(IPAddress.Parse("192.168.0.1").GetAddressBytes(), 0);
+            var peerEndpointBytes = IPAddress.Parse("192.168.0.1").GetAddressBytes();
+            var peerEndpointMock = BitConverter.ToUInt32(peerEndpointBytes, 0);
             
             var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
             var scopeMock = new Mock<IServiceScope>();
             var redisCacheMock = new Mock<RedisCache>(MockBehavior.Loose, "localhost");
             var dbContext = new Mock<GameDbContext>(dbCtxOptions);
 
+            var playerGuid = Helpers.ConvertBytesToGuid(peerEndpointBytes);
+
             var playerDbSetMock = GetQueryableMockDbSet(
-                    new Player(_peerMock) { Name = "user_15000"}
+                    new Player(_peerMock)
+                    {
+                        GUID = playerGuid,
+                        Name = "user_15000"
+                    }
                 );
 
             dbContext.Setup(m => m.Set<Player>()).Returns(playerDbSetMock);
@@ -127,9 +135,10 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             _peerMock = new Mock<NetPeer>(MockBehavior.Loose, ipEndpointMock, 0).Object;
             
             scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
-                .Returns(_playerModelRepo);
+                     .Returns(_playerModelRepo);
             
-            redisCacheMock.Setup(m => m.GetCache(_peerId.ToString())).Returns("10.3,30.3,42.5");
+            redisCacheMock.Setup(m => m.GetCache(playerGuid.ToString()))
+                          .Returns("10.3,30.3,42.5");
 
             _subject = new PlayerController(scopeMock.Object, redisCacheMock.Object);
             

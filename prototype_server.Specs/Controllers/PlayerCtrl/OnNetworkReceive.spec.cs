@@ -47,6 +47,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             _redisCache = new RedisCache("localhost");
             _playerMock = new Player(_peerMock)
             {
+                GUID = Guid.NewGuid(),
                 Name = "user_15000",
                 IsLocalPlayer = true,
                 X = 12.3f,
@@ -136,6 +137,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             _redisCache = new RedisCache("localhost");
             _playerMock = new Player(_peerMock)
             {
+                GUID = Guid.NewGuid(),
                 Name = "user_15000",
                 IsLocalPlayer = true,
                 X = 12.3f,
@@ -212,6 +214,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             _redisCache = new RedisCache("localhost");
             _playerMock = new Player(_peerMock)
             {
+                GUID = Guid.NewGuid(),
                 Name = "user_15000",
                 IsLocalPlayer = true,
                 X = 12.3f,

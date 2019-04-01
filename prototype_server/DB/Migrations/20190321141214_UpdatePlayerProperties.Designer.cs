@@ -8,7 +8,7 @@ using prototype_server.DB;
 namespace prototype_server.DB.Migrations
 {
     [DbContext(typeof(GameDbContext))]
-    [Migration("20190321141214_UpdatePlayerAttributes")]
+    [Migration("20190321141214_UpdatePlayerProperties")]
     partial class UpdatePlayerAttributes
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
