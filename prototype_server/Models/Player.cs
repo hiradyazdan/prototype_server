@@ -1,11 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-#if DEBUG
-    using prototype_server.Libs.LiteNetLib;
-#else
-    using LiteNetLib;
-#endif
+using LiteNetLib;
 
 namespace prototype_server.Models
 {

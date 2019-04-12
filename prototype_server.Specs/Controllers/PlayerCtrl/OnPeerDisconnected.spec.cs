@@ -1,16 +1,16 @@
 using System;
-using System.Linq;
 using System.Net;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using LiteNetLib;
 using Moq;
+
 using prototype_server.Controllers;
 using prototype_server.DB;
-using prototype_server.Libs.LiteNetLib;
 using prototype_server.Models;
 using prototype_server.Specs.Config;
 using prototype_server.Specs.Config.Utils;
+using prototype_server.Specs.Config.Utils.Helpers;
 
 namespace prototype_server.Specs.Controllers.PlayerCtrl
 {   
@@ -21,27 +21,27 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         private Player _playerMock;
         private NetPeer _peerMock;
         private Guid _playerGuid;
-
-        private static DbSet<T> GetQueryableMockDbSet<T>(params T[] sourceList) where T : class
-        {
-            var queryable = sourceList.AsQueryable();
-
-            var dbSet = new Mock<DbSet<T>>();
-            dbSet.As<IQueryable<T>>().Setup(m => m.Provider).Returns(queryable.Provider);
-            dbSet.As<IQueryable<T>>().Setup(m => m.Expression).Returns(queryable.Expression);
-            dbSet.As<IQueryable<T>>().Setup(m => m.ElementType).Returns(queryable.ElementType);
-            dbSet.As<IQueryable<T>>().Setup(m => m.GetEnumerator()).Returns(() => queryable.GetEnumerator());
-
-            return dbSet.Object;
-        }
         
         private void EstablishContext()
         {
             var peerEndpointBytes = IPAddress.Parse("192.168.0.1").GetAddressBytes();
-            var peerEndpointMock = BitConverter.ToUInt32(peerEndpointBytes, 0);
+            var peerEndpoint = BitConverter.ToUInt32(peerEndpointBytes, 0);
             
             _playerGuid = Helpers.ConvertBytesToGuid(peerEndpointBytes);
             
+            var disconnectInfo = new DisconnectInfo();
+            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpoint, 15000).Object;
+            var scopeMock = new Mock<IServiceScope>();
+            var dbContextMock = new Mock<GameDbContext>();
+            var playerDbSetMock = Helpers.GetQueryableMockDbSet(_playerMock);
+
+            const int deliveryMethodHeaderSize = 3;
+            const int rawDataSize = deliveryMethodHeaderSize + 
+                                    sizeof(int) + 
+                                    sizeof(bool) + 
+                                    sizeof(float) * 3;
+            
+            _peerMock = Helpers.GetPeerMock(ipEndpointMock);
             _playerMock = new Player(_peerMock)
             {
                 GUID = _playerGuid,
@@ -51,27 +51,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                 Z = 42.5f
             };
             
-            var disconnectInfo = new DisconnectInfo();
-            var ipEndpointMock = new Mock<IPEndPoint>(MockBehavior.Loose, peerEndpointMock, 15000).Object;
-            var scopeMock = new Mock<IServiceScope>();
-            var dbContextMock = new Mock<GameDbContext>();
-            var playerDbSetMock = GetQueryableMockDbSet(_playerMock);
-            var readerMock = new Mock<NetPacketReader>();
-            
-            const int deliveryMethodHeaderSize = 3;
-            const int rawDataSize = deliveryMethodHeaderSize + 
-                                    sizeof(int) + 
-                                    sizeof(bool) + 
-                                    sizeof(float) * 3;
-
-            readerMock.Setup(m => m.RawData).Returns(new byte[rawDataSize]);
-            readerMock.Setup(m => m.RawDataSize).Returns(rawDataSize);
-            readerMock.Setup(m => m.GetInt()).Returns((int) NET_DATA_TYPE.PlayerPosition);
-            readerMock.Setup(m => m.GetBool()).Returns(_playerMock.IsLocalPlayer);
-            readerMock.SetupSequence(m => m.GetFloat())
-                      .Returns(_playerMock.X)
-                      .Returns(_playerMock.Y)
-                      .Returns(_playerMock.Z);
+            var readerMock = Helpers.GetReaderMock(_playerMock, NET_DATA_TYPE.PlayerPosition, rawDataSize);
             
             dbContextMock.Setup(m => m.Set<Player>()).Returns(playerDbSetMock);
             
@@ -80,17 +60,13 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
                      .Returns(playerModelRepoMock.Object);
             
-            var peerMock = new Mock<NetPeer>(MockBehavior.Loose, ipEndpointMock, 0);
-
-            _peerMock = peerMock.Object;
-            
             _redisCacheAdapter = new RedisCacheAdapter("localhost");
 
             _subject = new PlayerController(scopeMock.Object, _redisCacheAdapter);
             
             _subject.OnPeerConnected(_peerMock);
 
-            _subject.OnNetworkReceive(_peerMock, readerMock.Object, DeliveryMethod.Sequenced);
+            _subject.OnNetworkReceive(_peerMock, readerMock, DeliveryMethod.Sequenced);
             
             _subject.OnPeerDisconnected(_peerMock, disconnectInfo);
         }

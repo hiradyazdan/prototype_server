@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Threading;
-
-#if DEBUG
-    using prototype_server.Libs.LiteNetLib;
-#else
-    using LiteNetLib;
-#endif
+using LiteNetLib;
 
 namespace prototype_server
 {

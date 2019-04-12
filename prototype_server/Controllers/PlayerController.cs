@@ -3,14 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
+using LiteNetLib;
 using prototype_server.DB;
 using prototype_server.Models;
-
-#if DEBUG
-    using prototype_server.Libs.LiteNetLib;
-#else
-    using LiteNetLib;
-#endif
 
 namespace prototype_server.Controllers
 {   

@@ -1,8 +1,8 @@
 using System;
 
-namespace prototype_server.Specs.Config.Utils
+namespace prototype_server.Specs.Config.Utils.Helpers
 {
-    internal static class Helpers
+    internal static partial class Helpers
     {
         internal static Guid ConvertBytesToGuid(byte[] valueBytes)
         {

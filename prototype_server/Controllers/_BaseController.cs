@@ -1,11 +1,6 @@
+using LiteNetLib.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using prototype_server.DB;
-
-#if DEBUG
-    using prototype_server.Libs.LiteNetLib.Utils;
-#else
-    using LiteNetLib.Utils;
-#endif
 
 namespace prototype_server.Controllers
 {       

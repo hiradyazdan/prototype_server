@@ -2,15 +2,11 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
+using LiteNetLib;
+
 using prototype_server.Config;
 using prototype_server.Controllers;
 using prototype_server.DB;
-
-#if DEBUG
-    using prototype_server.Libs.LiteNetLib;
-#else
-    using LiteNetLib;
-#endif
 
 namespace prototype_server
 {

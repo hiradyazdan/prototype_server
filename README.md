@@ -35,7 +35,7 @@ dotnet ef database update [migration name]
 #### Run
 
 ```shell
-dotnet test /p:AltCover=true /p:AltCoverXmlreport="bin/Debug/netcoreapp2.2/Reports/coverage.xml" /p:AltCoverAssemblyExcludeFilter="NUnit|Specs"  /p:AltCoverPathFilter=Libs|Migrations
+dotnet test /p:AltCover=true /p:AltCoverXmlreport="bin/Debug/netcoreapp2.2/Reports/coverage.xml" /p:AltCoverAssemblyExcludeFilter="NUnit|Specs" /p:AltCoverPathFilter="Libs|Migrations"
 ```
 
 
