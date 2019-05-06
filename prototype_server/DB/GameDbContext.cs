@@ -14,7 +14,8 @@ namespace prototype_server.DB
     {
         public GameDbContext CreateDbContext(string[] args)
         {
-            var svcConfig = new ServiceConfiguration();
+            var config = Configuration.Initialize(args);
+            var svcConfig = ServiceConfiguration.Initialize(config);
             
             return svcConfig.ServiceProvider.GetService<GameDbContext>();
         }
@@ -55,6 +56,10 @@ namespace prototype_server.DB
 
                 ((_BaseModel)entity.Entity).UpdatedAt = DateTime.UtcNow;
             }
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder options)
+        {
         }
         
         protected override void OnModelCreating(ModelBuilder modelBuilder)

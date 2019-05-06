@@ -42,7 +42,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             {
                 GUID = Guid.NewGuid(),
                 Name = "user_15000",
-                IsLocalPlayer = true,
+                IsLocal = true,
                 X = 12.3f,
                 Y = 30.3f,
                 Z = 42.5f
@@ -81,7 +81,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 
             dataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
             dataWriter.Put(_peerId);
-            dataWriter.Put(_playerMock.IsLocalPlayer);
+            dataWriter.Put(_playerMock.IsLocal);
             dataWriter.Put(_playerMock.X);
             dataWriter.Put(_playerMock.Y);
             dataWriter.Put(_playerMock.Z);
@@ -113,7 +113,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             {
                 GUID = Guid.NewGuid(),
                 Name = "user_15000",
-                IsLocalPlayer = true,
+                IsLocal = true,
                 X = 12.3f,
                 Y = 30.3f,
                 Z = 42.5f
@@ -174,7 +174,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             {
                 GUID = Guid.NewGuid(),
                 Name = "user_15000",
-                IsLocalPlayer = true,
+                IsLocal = true,
                 X = 12.3f,
                 Y = 30.3f,
                 Z = 42.5f

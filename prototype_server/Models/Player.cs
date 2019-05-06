@@ -13,16 +13,30 @@ namespace prototype_server.Models
         [Required]
         public string Name { get; set; }
         
-        public float X, Y, Z;
-        public readonly NetPeer Peer;
-        public bool Moved, IsLocalPlayer;
+        [NotMapped]
+        public float X { get; set; }
+        
+        [NotMapped]
+        public float Y { get; set; }
+        
+        [NotMapped]
+        public float Z { get; set; }
+        
+        [NotMapped]
+        public NetPeer Peer { get; }
+        
+        [NotMapped]
+        public bool Moved { get; set; }
+        
+        [NotMapped]
+        public bool IsLocal { get; set; }
         
         public Player(NetPeer peer)
         {
             Peer = peer;
             
             Moved = false;
-            IsLocalPlayer = false;
+            IsLocal = false;
             
             X = 0.0f;
             Y = 0.0f;

@@ -1,20 +1,28 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using LiteNetLib;
+using UnityEngine;
+
 using prototype_server.DB;
 using prototype_server.Models;
+using prototype_server.Serializers;
 
 namespace prototype_server.Controllers
 {   
     public class PlayerController : ApplicationController
-    {   
-        private enum NET_DATA_TYPE
+    {
+        private enum PacketTypes
         {
-            PlayerPosition,
-            PlayerPositionsArray,
+            Position,
+            Positions
+        }
+        
+        private enum ObjectTypes
+        {
+            Player,
+            Enemy
         }
 
         private readonly IRepository<Player> _playerModel;
@@ -30,14 +38,14 @@ namespace prototype_server.Controllers
         {
             foreach(var (_, player) in _playersDictionary)
             {
-                player.IsLocalPlayer = false;
+                player.IsLocal = false;
                 player.Moved = false;
             }
         }
         
         private void SyncWithConnectedPeer(NetPeer connectedPeer, bool onPeerConnected = true)
         {
-            var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced;
+            var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced; // 3 bytes
             var playerMoved = false;
             
             long peerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{connectedPeer.EndPoint.Address}").GetAddressBytes(), 0);
@@ -45,33 +53,67 @@ namespace prototype_server.Controllers
             DataWriter.Reset();
             Array.Clear(DataWriter.Data, 0, DataWriter.Data.Length);
             
-            DataWriter.Put((int)NET_DATA_TYPE.PlayerPositionsArray);
-            
+            DataWriter.Put((int)PacketTypes.Positions); // 4 bytes
+
             foreach (var (_, player) in _playersDictionary)
             {
-                long playerEndpoint = BitConverter.ToUInt32(IPAddress.Parse($"{player.Peer.EndPoint.Address}").GetAddressBytes(), 0);
-                
-                player.IsLocalPlayer = playerEndpoint == peerEndpoint;
+                long playerEndpoint =
+                    BitConverter.ToUInt32(IPAddress.Parse($"{player.Peer.EndPoint.Address}").GetAddressBytes(), 0);
+
+                player.IsLocal = playerEndpoint == peerEndpoint;
 
                 if (!onPeerConnected) // non-eventful sync (loop sync)
                 {
-                    if (player.IsLocalPlayer && !player.Moved) continue;
-                    
+                    if (player.IsLocal && !player.Moved) continue;
+
                     playerMoved = true;
                 }
                 
-                DataWriter.Put(playerEndpoint);
-                
-                DataWriter.Put(player.IsLocalPlayer);
-                
-                DataWriter.Put(player.X);
-                DataWriter.Put(player.Y);
-                DataWriter.Put(player.Z);
+                // serialized size: 30 (3 + 4 + 23)
+                // un-serialized size: 32 (3 + 4 + 25)
+                SetDataWriter(player, playerEndpoint);
             }
             
             if (onPeerConnected || playerMoved)
             {
                 connectedPeer.Send(DataWriter, deliveryMethod);
+            }
+        }
+
+        private void SetDataWriter(Player player, long playerEndpoint)
+        {
+            if (IsSerialized)
+            {
+//                _BasePacket.IsCompressed = false;
+
+                var positionPacket = new PositionPacket(
+                    (int) ObjectTypes.Player, 
+                    playerEndpoint, 
+                    player.IsLocal, 
+                    player.X, 
+                    player.Y, 
+                    player.Z
+                );
+                
+                var packetBytes = positionPacket.ToByteArray(); // 23 bytes
+
+                DataWriter.Put(packetBytes);
+            }
+            else
+            {
+#if DEBUG
+                // un-serialized total: 25 bytes
+                    
+                DataWriter.Put((int) ObjectTypes.Player); // 4 bytes
+                    
+                DataWriter.Put(playerEndpoint); // 8 bytes
+
+                DataWriter.Put(player.IsLocal); // 1 byte
+
+                DataWriter.Put(player.X); // 4 bytes
+                DataWriter.Put(player.Y); // 4 bytes
+                DataWriter.Put(player.Z); // 4 bytes
+#endif
             }
         }
 
@@ -98,12 +140,10 @@ namespace prototype_server.Controllers
 #if DEBUG
             Console.WriteLine("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
 #endif
-            var peerEndpointBytes = IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes();
-
             // GUID is exactly 16 bytes or and 36 character in length
             // IP address max size is 16 bytes,
             // therefore the generated guid size won't ever be more than 16 bytes
-            var playerGuid = ConvertBytesToGuid(peerEndpointBytes);
+            var playerGuid = ConvertBytesToGuid(peer.EndPoint.Address.GetAddressBytes());
 
             Player newPlayer = null;
             
@@ -133,7 +173,7 @@ namespace prototype_server.Controllers
                 _playersDictionary[playerGuid].Z = coords[2];
             }
 
-            _playersDictionary[playerGuid].IsLocalPlayer = true;
+            _playersDictionary[playerGuid].IsLocal = true;
             
             // Sync with local client
             SyncWithConnectedPeer(peer);
@@ -152,12 +192,10 @@ namespace prototype_server.Controllers
                 " - Reason: " + disconnectInfo.Reason
             );
             
-            var peerEndpointBytes = IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes();
-            
             // GUID is exactly 16 bytes or and 36 character in length
             // IP address max size is 16 bytes,
             // therefore the generated guid size won't ever be more than 16 bytes
-            var playerGuid = ConvertBytesToGuid(peerEndpointBytes);
+            var playerGuid = ConvertBytesToGuid(peer.EndPoint.Address.GetAddressBytes());
 
             // Why checking this?!
             if (!_playersDictionary.ContainsKey(playerGuid)) return;
@@ -177,33 +215,57 @@ namespace prototype_server.Controllers
             
             // Not sure if there's any point for this as it will always be a byte[] with some size
             if(reader.RawData == null) return;
-            if (reader.RawDataSize - deliveryMethodHeaderSize != sizeof(int) + sizeof(bool) + sizeof(float) * 3) return;
+            if (reader.RawDataSize - deliveryMethodHeaderSize != sizeof(int) * 2 + sizeof(long) + sizeof(bool) + sizeof(float) * 3) return;
             
-            var netDataType = (NET_DATA_TYPE)reader.GetInt();
+            var packetType = (PacketTypes)reader.GetInt(); // 4 bytes
             
-            if (netDataType != NET_DATA_TYPE.PlayerPosition) return;
+            if (packetType != PacketTypes.Position) return;
+            
+            ObjectTypes objectType;
+            bool isLocal;
+            float x, y, z;
 
-            var isLocalPlayer = reader.GetBool();
+            if (IsSerialized)
+            {
+                var positionPacket = new PositionPacket(reader.GetRemainingBytes());
+                
+                // serialized total: 17 - 2 bytes
+                
+                objectType = (ObjectTypes) positionPacket.ObjectType;
+                isLocal = positionPacket.IsLocal;
             
-            var x = reader.GetFloat();
-            var y = reader.GetFloat();
-            var z = reader.GetFloat();
+                x = positionPacket.X;
+                y = positionPacket.Y;
+                z = positionPacket.Z;
+            }
+            else
+            {
+                var positionPacket = new PositionPacket(reader);
+                
+                // un-serialized total: 17 bytes
+                
+                objectType = (ObjectTypes) positionPacket.ObjectType; // 4 bytes
+                isLocal = positionPacket.IsLocal; // 1 byte
             
-            var peerEndpointBytes = IPAddress.Parse($"{peer.EndPoint.Address}").GetAddressBytes();
+                x = positionPacket.X; // 4 bytes
+                y = positionPacket.Y; // 4 bytes
+                z = positionPacket.Z; // 4 bytes
+            }
             
             // GUID is exactly 16 bytes or and 36 character in length
             // IP address max size is 16 bytes,
             // therefore the generated guid size won't ever be more than 16 bytes
-            var playerGuid = ConvertBytesToGuid(peerEndpointBytes);
+            var playerGuid = ConvertBytesToGuid(peer.EndPoint.Address.GetAddressBytes());
             
-            _playersDictionary[playerGuid].IsLocalPlayer = isLocalPlayer;
+            Console.WriteLine(packetType + " [" + playerGuid + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
+            
+//            _playersDictionary[playerGuid]
+            _playersDictionary[playerGuid].IsLocal = isLocal;
             
             _playersDictionary[playerGuid].X = x;
             _playersDictionary[playerGuid].Y = y;
             _playersDictionary[playerGuid].Z = z;
-
-            Console.WriteLine(netDataType + " [" + playerGuid + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
-
+            
             _playersDictionary[playerGuid].Moved = true;
         }
     }

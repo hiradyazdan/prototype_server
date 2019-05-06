@@ -17,7 +17,6 @@ namespace prototype_server.DB
     
     public class ModelRepository<T> : IRepository<T> where T : _BaseModel 
     {
-        
         private readonly GameDbContext _context;
         private readonly DbSet<T> _models;
         

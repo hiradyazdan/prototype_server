@@ -23,7 +23,7 @@ namespace prototype_server.Specs.Config.Utils.Helpers
             var dataWriter = new NetDataWriter();
 
             dataWriter.Put((int)netDataType);
-            dataWriter.Put(player.IsLocalPlayer);
+            dataWriter.Put(player.IsLocal);
             dataWriter.Put(player.X);
             dataWriter.Put(player.Y);
             dataWriter.Put(player.Z);

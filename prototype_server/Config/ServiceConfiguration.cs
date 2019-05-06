@@ -9,31 +9,44 @@ using prototype_server.DB;
 
 namespace prototype_server.Config
 {
-    internal class ServiceConfiguration
+    public static class Configuration
     {
-        public IServiceProvider ServiceProvider { get; }
+        public static IConfiguration SharedInstance { get; private set; }
         
         private const string ConfigFileName = "appsettings";
         private const string ConfigFileExtension = "json";
-        private readonly (string Redis, string MySql) _connectionStrings;
-        private static readonly LoggerFactory MySqlLoggerFactory = new LoggerFactory(new[]
-        {
-            new ConsoleLoggerProvider((category, level) => 
-                category == DbLoggerCategory.Database.Command.Name && 
-                level == LogLevel.Information, true)
-        });
-        
-        public ServiceConfiguration()
+
+        private static IConfiguration BuildConfig(string[] args = null)
         {
             var appEnvironmentVariable = Environment.GetEnvironmentVariable("NETCOREAPP_ENVIRONMENT") ?? "Production";
             
-            var configuration = new ConfigurationBuilder()
+            return new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile($"{ConfigFileName}.{ConfigFileExtension}")
                 .AddJsonFile($"{ConfigFileName}.{appEnvironmentVariable}.{ConfigFileExtension}",
                     optional: true, reloadOnChange: true)
+                .AddCommandLine(args)
+                .AddEnvironmentVariables()
                 .Build();
+        }
+        
+        public static IConfiguration Initialize(string[] args = null)
+        {
+            return SharedInstance ?? (SharedInstance = BuildConfig(args));
+        }
+    }
+    
+    internal class ServiceConfiguration
+    {
+        public IServiceProvider ServiceProvider { get; }
+        public static ServiceConfiguration SharedInstance { get; private set; }
 
+        private bool _isClearRedisCache;
+        private bool _isClearDatabase;
+        private readonly (string Redis, string MySql) _connectionStrings;
+        
+        private ServiceConfiguration(IConfiguration configuration)
+        {
             _connectionStrings = (
                 Redis: configuration.GetConnectionString("RedisConnection"),
                 MySql: configuration.GetConnectionString("MySqlConnection")
@@ -42,6 +55,14 @@ namespace prototype_server.Config
             IServiceCollection services = new ServiceCollection();
             ConfigureServices(services);
             ServiceProvider = services.BuildServiceProvider();
+#if DEBUG
+            ConfigureDevelopment(configuration);
+#endif
+        }
+        
+        public static ServiceConfiguration Initialize(IConfiguration configuration)
+        {
+            return SharedInstance ?? (SharedInstance = new ServiceConfiguration(configuration));
         }
         
         private void ConfigureServices(IServiceCollection services)
@@ -56,6 +77,15 @@ namespace prototype_server.Config
             }
             
             /**
+             * DB Logging
+             */
+            services.AddLogging(logOptions => {
+#if DEBUG
+                logOptions.AddConsole().AddFilter(DbLoggerCategory.Database.Command.Name, LogLevel.Information);
+#endif
+            });
+
+            /**
              * Redis
              */
             services.AddTransient(provider => new RedisCache(redisOptions));
@@ -66,14 +96,48 @@ namespace prototype_server.Config
             services.AddDbContext<GameDbContext>(options =>
             {
                 options.UseMySQL(mysqlOptions);
-                options.UseLoggerFactory(MySqlLoggerFactory);
-
 #if DEBUG
                 options.EnableSensitiveDataLogging();
 #endif                
             });
             
-            services.AddScoped(typeof(IRepository<>), typeof(ModelRepository<>));  
+            services.AddScoped(typeof(IRepository<>), typeof(ModelRepository<>));
+        }
+
+        private void ConfigureDevelopment(IConfiguration configuration)
+        {
+            _isClearDatabase = configuration.IsConfigActive("clearDatabase");
+            _isClearRedisCache = configuration.IsConfigActive("clearRedisCache") || _isClearDatabase;
+
+            if(!_isClearRedisCache && !_isClearDatabase) return;
+
+            ResetRedisCache();
+            
+            if (!_isClearDatabase) return;
+            
+            ResetDevelopmentDatabases();
+        }
+
+        private void ResetRedisCache()
+        {
+            Console.WriteLine("Clear Redis Cache: " + _isClearRedisCache);
+            
+            ServiceProvider.GetService<RedisCache>().FlushAllDatabases();
+            _isClearRedisCache = false;
+        }
+        
+        private void ResetDevelopmentDatabases()
+        {
+            if (_isClearRedisCache)
+            {
+                ResetRedisCache();
+            }
+
+            Console.WriteLine("Clear Database: " + _isClearDatabase);
+            
+            ServiceProvider.GetService<GameDbContext>().Database.EnsureDeleted();
+            ServiceProvider.GetService<GameDbContext>().Database.Migrate();
+            _isClearDatabase = false;
         }
     }
 }

@@ -6,6 +6,7 @@ namespace prototype_server.DB
 {
     public interface IRedisCache
     {
+        void FlushAllDatabases();
         string GetCache(string key);
         void SetCache(string key, string value);
         void RemoveCache(string key);
@@ -13,17 +14,34 @@ namespace prototype_server.DB
     
     public class RedisCache : IRedisCache
     {
+        private readonly IConnectionMultiplexer _connection;
+        private readonly string _connectionString;
         private static IDatabase _cache;
         
         public RedisCache(string connectionString)
         {
-            var connection = new Lazy<ConnectionMultiplexer>(() => ConnectionMultiplexer.Connect(connectionString));
- 
+            _connectionString = connectionString;
+            
+            var options = ConfigurationOptions.Parse(_connectionString);
+#if DEBUG
+            options.AllowAdmin = true;
+#endif
+            _connection = ConnectionMultiplexer.Connect(options);
+            
+            var connection = new Lazy<ConnectionMultiplexer>(() => (ConnectionMultiplexer) _connection);
+            
             _cache = connection.Value.GetDatabase();
+        }
+        
+        public virtual void FlushAllDatabases()
+        {
+#if DEBUG
+            _connection.GetServer(_connectionString).FlushAllDatabases();
+#endif
         }
  
         public virtual string GetCache(string key)
-        {            
+        {
             try
             {
                 return _cache.StringGet(key);

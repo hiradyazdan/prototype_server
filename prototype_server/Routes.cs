@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using LiteNetLib;
 
@@ -12,13 +13,13 @@ namespace prototype_server
 {
     public class Routes : RoutesBase
     {
-        public NetManager ServerInstance;
+        public NetManager ServerInstance { private get; set; }
 
         private readonly PlayerController _playerCtrl;
         
-        public Routes()
+        public Routes(IConfiguration configuration)
         {
-            var svcConfig = new ServiceConfiguration();
+            var svcConfig = ServiceConfiguration.Initialize(configuration);
             var scope = svcConfig.ServiceProvider.CreateScope();
             var redisCache = svcConfig.ServiceProvider.GetRequiredService<RedisCache>();
             
