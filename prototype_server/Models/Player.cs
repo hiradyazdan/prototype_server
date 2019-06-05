@@ -26,7 +26,13 @@ namespace prototype_server.Models
         public NetPeer Peer { get; }
         
         [NotMapped]
+        public bool Spawned { get; set; }
+        
+        [NotMapped]
         public bool Moved { get; set; }
+        
+        [NotMapped]
+        public bool Idle { get; set; }
         
         [NotMapped]
         public bool IsLocal { get; set; }

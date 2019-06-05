@@ -7,15 +7,15 @@ namespace prototype_server.Serializers
     [MessagePackObject]
     public class PositionPacket : _BasePacket
     {
-        [Key(3)] 
-        public float X { get; set; }
         [Key(4)] 
-        public float Y { get; set; }
+        public float X { get; set; }
         [Key(5)] 
+        public float Y { get; set; }
+        [Key(6)] 
         public float Z { get; set; }
 
         [SerializationConstructor]
-        public PositionPacket(int objectType, long id, bool isLocal, float x, float y, float z) : base(objectType, id, isLocal)
+        public PositionPacket(int actionType, int objectType, long id, bool isLocal, float x, float y, float z) : base(actionType, objectType, id, isLocal)
         {
             X = x;
             Y = y;

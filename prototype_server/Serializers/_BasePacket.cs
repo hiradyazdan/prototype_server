@@ -14,19 +14,22 @@ namespace prototype_server.Serializers
     [MessagePackObject]
     public class _BasePacket : IPacket
     {
-        [Key(0)] 
-        public int ObjectType { get; set; }
+        [Key(0)]
+        public int ActionType { get; set; }
         [Key(1)] 
-        public long Id { get; set; }
+        public int ObjectType { get; set; }
         [Key(2)] 
+        public long Id { get; set; }
+        [Key(3)] 
         public bool IsLocal { get; set; }
         
 //        [IgnoreMember]
         public static bool IsCompressed { protected get; set; } = true;
 
         [SerializationConstructor]
-        public _BasePacket(int objectType, long id, bool isLocal)
+        public _BasePacket(int actionType, int objectType, long id, bool isLocal)
         {
+            ActionType = actionType;
             ObjectType = objectType;
             Id = id;
             IsLocal = isLocal;
@@ -40,7 +43,8 @@ namespace prototype_server.Serializers
             var state = IsCompressed ? 
                 LZ4MessagePackSerializer.Deserialize<_BasePacket>(stateBytes) : 
                 MessagePackSerializer.Deserialize<_BasePacket>(stateBytes);
-            
+
+            ActionType = state.ActionType;
             ObjectType = state.ObjectType;
             Id = state.Id;
             IsLocal = state.IsLocal;
@@ -51,6 +55,7 @@ namespace prototype_server.Serializers
          */
         protected _BasePacket(NetDataReader reader)
         {
+            ActionType = reader.GetInt();
             ObjectType = reader.GetInt();
             Id = reader.GetLong();
             IsLocal = reader.GetBool();
