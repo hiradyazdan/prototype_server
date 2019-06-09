@@ -4,6 +4,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server", "prototy
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Specs", "prototype_server.Specs\prototype_server.Specs.csproj", "{9C535683-51AC-408A-AF0E-5406F4C81277}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_serializers", "..\prototype_serializers\prototype_serializers\prototype_serializers.shproj", "{550BEBE4-02E5-428C-BF21-DAE40B54C6D8}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_services", "..\prototype_services\prototype_services\prototype_services.shproj", "{17C948C2-A9E2-4F2A-B891-58A8737B4F6D}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_config", "..\prototype_config\prototype_config\prototype_config.shproj", "{DF4EA7DB-9414-48A2-B593-639175DCBC7F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +24,13 @@ Global
 		{9C535683-51AC-408A-AF0E-5406F4C81277}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C535683-51AC-408A-AF0E-5406F4C81277}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C535683-51AC-408A-AF0E-5406F4C81277}.Release|Any CPU.Build.0 = Release|Any CPU
+		{283C80E7-43C7-4067-82B5-6267D42F1C94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{283C80E7-43C7-4067-82B5-6267D42F1C94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{283C80E7-43C7-4067-82B5-6267D42F1C94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{283C80E7-43C7-4067-82B5-6267D42F1C94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

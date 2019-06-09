@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using prototype_services.Common;
+using prototype_services.Interfaces;
 using StackExchange.Redis;
 
 namespace prototype_server.DB
@@ -17,9 +19,16 @@ namespace prototype_server.DB
         private readonly IConnectionMultiplexer _connection;
         private readonly string _connectionString;
         private static IDatabase _cache;
+
+        protected readonly ILogService LogService;
         
         public RedisCache(string connectionString)
         {
+            LogService = new LogService(false, true)
+            {
+                LogScope = this
+            };
+
             _connectionString = connectionString;
             
             var options = ConfigurationOptions.Parse(_connectionString);
@@ -48,13 +57,13 @@ namespace prototype_server.DB
             }
             catch (KeyNotFoundException exc)
             {
-                Console.WriteLine(exc);
+                LogService.LogError(exc);
                 return null;
             }
         }
  
         public virtual void SetCache(string key, string value)
-        {            
+        {
             _cache.StringSet(key, value);
         }
  
@@ -66,7 +75,7 @@ namespace prototype_server.DB
             }
             catch (KeyNotFoundException exc)
             {
-                Console.WriteLine(exc);
+                LogService.LogError(exc);
             }
         }
     }

@@ -5,9 +5,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using LiteNetLib;
 
-using prototype_server.Config;
+using prototype_config;
 using prototype_server.Controllers;
 using prototype_server.DB;
+using prototype_services.Common;
+using prototype_services.Interfaces;
 
 namespace prototype_server
 {
@@ -15,15 +17,20 @@ namespace prototype_server
     {
         public NetManager ServerInstance { private get; set; }
 
+        private readonly ILogService _logService;
+        
         private readonly PlayerController _playerCtrl;
         
-        public Routes(IConfiguration configuration)
+        public Routes(IConfiguration configuration, ILogService logService)
         {
             var svcConfig = ServiceConfiguration.Initialize(configuration);
             var scope = svcConfig.ServiceProvider.CreateScope();
             var redisCache = svcConfig.ServiceProvider.GetRequiredService<RedisCache>();
             
-            _playerCtrl = new PlayerController(scope, redisCache);
+            _logService = logService;
+            _logService.LogScope = this;
+            
+            _playerCtrl = new PlayerController(scope, redisCache, _logService);
         }
 
         public override void OnPeerConnected(NetPeer peer)
@@ -38,7 +45,7 @@ namespace prototype_server
 
         public override void OnNetworkError(IPEndPoint endPoint, SocketError socketError)
         {
-            Console.WriteLine(endPoint.Address + ":" + endPoint.Port + " OnNetworkError: " + socketError);
+            _logService.Log(endPoint.Address + ":" + endPoint.Port + " OnNetworkError: " + socketError);
         }
 
         public override void OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
@@ -48,12 +55,12 @@ namespace prototype_server
 
         public override void OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetPacketReader reader, UnconnectedMessageType messageType)
         {
-            Console.WriteLine("OnNetworkReceiveUnconnected");
+            _logService.Log("OnNetworkReceiveUnconnected");
         }
 
         public override void OnNetworkLatencyUpdate(NetPeer peer, int latency)
         {
-//            Console.WriteLine("OnNetworkLatencyUpdate");
+//            _logService.Log("OnNetworkLatencyUpdate");
         }
         
         public override void OnConnectionRequest(ConnectionRequest request)

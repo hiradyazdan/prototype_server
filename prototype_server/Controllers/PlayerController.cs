@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using LiteNetLib;
+using LiteNetLib.Utils;
 
-using prototype_server.Config;
+using prototype_config;
+using prototype_serializers.Packets;
+using prototype_serializers.Debug;
 using prototype_server.DB;
 using prototype_server.Models;
-using prototype_server.Serializers;
+using prototype_services.Interfaces;
 
 namespace prototype_server.Controllers
 {   
@@ -16,9 +20,11 @@ namespace prototype_server.Controllers
         private readonly IRepository<Player> _playerModel;
         private readonly Dictionary<Guid, Player> _playersDictionary;
         
+        private PacketTypes _packetType;
+        private bool _playerIdle;
         private int _syncCount;
 
-        public PlayerController(IServiceScope scope, RedisCache redis) : base(scope, redis)
+        public PlayerController(IServiceScope scope, RedisCache redis, ILogService logService) : base(scope, redis, logService)
         {
             _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
             _playersDictionary = new Dictionary<Guid, Player>();
@@ -26,9 +32,7 @@ namespace prototype_server.Controllers
         
         public void OnPeerConnected(NetPeer peer)
         {
-#if DEBUG
-            Console.WriteLine("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
-#endif
+            LogService.Log("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
             
             var addressBytes = peer.EndPoint.Address.GetAddressBytes();
 #if DEBUG
@@ -61,7 +65,7 @@ namespace prototype_server.Controllers
             if (cache != null)
             {
 #if DEBUG
-                Console.WriteLine("Hit Cache");
+                LogService.Log("Hit Cache");
 #endif
                 var strArr = cache.Split(',', StringSplitOptions.RemoveEmptyEntries);
                 var coords = Array.ConvertAll(strArr, float.Parse);
@@ -72,7 +76,7 @@ namespace prototype_server.Controllers
             }
             
             // Sync with local client
-            SyncWithConnectedPeer(peer);
+            SyncWithConnectedPeer(peer, ActionTypes.Spawn);
             
             if (cache != null || newPlayer == null) return;
             
@@ -81,7 +85,7 @@ namespace prototype_server.Controllers
         
         public void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
         {
-            Console.WriteLine(
+            LogService.Log(
                 "[" + peer.Id + "] OnPeerDisconnected: " + 
                 peer.EndPoint.Address + ":" + 
                 peer.EndPoint.Port + 
@@ -121,12 +125,34 @@ namespace prototype_server.Controllers
             if (reader.RawDataSize - deliveryMethodHeaderSize != expectedPacketSize) return;
             
             var packetType = (PacketTypes) reader.GetInt(); // 4 bytes
+
+            switch (packetType)
+            {
+                case PacketTypes.Position:
+                    SetPosition(peer, reader);
+                    break;
+                case PacketTypes.Profile:
+                    SetProfile();
+                    break;
+                case PacketTypes.Positions:
+                    throw new ArgumentOutOfRangeException(nameof(packetType), packetType, "This packet is only for sending to clients");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(packetType), packetType, null);
+            }
+        }
+
+        private void SetProfile()
+        {
             
-            if (packetType != PacketTypes.Position) return;
+        }
+        
+        private void SetPosition(NetPeer peer, NetDataReader reader)
+        {
+            const PacketTypes packetType = PacketTypes.Position;
             
             var positionPacket = IsSerialized 
-                ? new PositionPacket(reader.GetRemainingBytes()) // serialized total: 17 - 2 bytes
-                : new PositionPacket(reader); // un-serialized total: 17 bytes
+                ? new PositionPacket(reader.GetRemainingBytes())
+                : (IPositionPacket) new PositionPacketDebug(reader);
             
             var actionType = (ActionTypes) positionPacket.ActionType;
             var objectType = (ObjectTypes) positionPacket.ObjectType;
@@ -143,7 +169,7 @@ namespace prototype_server.Controllers
             var portBytes = BitConverter.GetBytes(peerEndpoint.Port);
             var playerGuid = ConvertBytesToGuid(addressBytes.Concat(portBytes).ToArray());
             
-            Console.WriteLine(
+            LogService.Log(
                 $"{packetType} [{peerEndpoint.Address}:{peerEndpoint.Port}]: " +
                 $"(x: {x}, y: {y}, z: {z})"
             );
@@ -153,7 +179,10 @@ namespace prototype_server.Controllers
             // therefore the generated guid size won't ever be more than 16 bytes
             var playerGuid = ConvertBytesToGuid(addressBytes);
             
-            Console.WriteLine(packetType + " [" + playerGuid + "]: position packet: (x: " + x + ", y: " + y + ", z: " + z + ")");
+            LogService.Log(
+                $"{packetType} [{playerGuid}]: " +
+                $"(x: {x}, y: {y}, z: {z})"
+            );
 #endif
             var isSpawned = actionType == ActionTypes.Spawn;
             var isMoved = actionType == ActionTypes.Move;
@@ -191,17 +220,57 @@ namespace prototype_server.Controllers
                     continue;
                 }
                 
-                SyncWithConnectedPeer(player.Peer, false);
+                SyncWithConnectedPeer(player.Peer, player.ActionType, false);
             }
             
             ResetPlayersStatus();
         }
         
-        private void SyncWithConnectedPeer(NetPeer connectedPeer, bool onPeerConnected = true)
+        private void SyncWithConnectedPeer(NetPeer connectedPeer, ActionTypes actionType, bool onPeerConnected = true)
         {
             var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced; // 3 bytes
-            var playerIdle = true;
+            _playerIdle = true;
             
+            DataWriter.Reset();
+            Array.Clear(DataWriter.Data, 0, DataWriter.Data.Length);
+
+            switch (actionType)
+            {
+                case ActionTypes.Spawn:
+                case ActionTypes.Move:
+                    _packetType = PacketTypes.Positions;
+                    break;
+                case ActionTypes.Idle:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(actionType), actionType, null);
+            }
+
+            switch (_packetType)
+            {
+                case PacketTypes.Positions:
+                    SetPositions(connectedPeer, onPeerConnected);
+                    break;
+                case PacketTypes.Profile:
+                case PacketTypes.Position:
+                    throw new ArgumentOutOfRangeException(nameof(_packetType), _packetType, "This packet is only for receiving from clients");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_packetType), _packetType, null);
+            }
+            
+            if (_playerIdle || _syncCount >= _playersDictionary.Count) return;
+            
+            LogService.Log(
+                $"{(IsSerialized ? "" : "Un-")}Serialized " + 
+                $"{_packetType} RawDataSize: {DataWriter.Length + deliveryMethod.GetSize() - 1}" // header size is 3 bytes
+            );
+            
+            connectedPeer.Send(DataWriter, deliveryMethod);
+            _syncCount++;
+        }
+
+        private void SetPositions(NetPeer connectedPeer, bool onPeerConnected)
+        {
             var peerEndpoint = connectedPeer.EndPoint;
             var peerAddressBytes = peerEndpoint.Address.GetAddressBytes();
 #if DEBUG
@@ -212,10 +281,9 @@ namespace prototype_server.Controllers
 #else
             long peerId = BitConverter.ToUInt32(peerAddressBytes, 0);
 #endif
-            DataWriter.Reset();
-            Array.Clear(DataWriter.Data, 0, DataWriter.Data.Length);
-            
-            DataWriter.Put((int) PacketTypes.Positions); // 4 bytes
+            DataWriter.Put((int) _packetType); // 4 bytes
+
+            var playerCount = 0;
             
             foreach (var (_, player) in _playersDictionary)
             {
@@ -239,7 +307,7 @@ namespace prototype_server.Controllers
                     
                     if (player.Idle || player.IsLocal) continue;
                     
-                    playerIdle = false;
+                    _playerIdle = false;
                 }
                 else
                 {
@@ -247,43 +315,50 @@ namespace prototype_server.Controllers
                      * event-full sync
                      */
                     
-                    playerIdle = false;
+                    _playerIdle = false;
                 }
                 
                 // serialized size: 30 (3 + 4 + 23)
-                // un-serialized size: 32 (3 + 4 + 25)
-                SetDataWriter(player, (long) playerId);
+                // un-serialized size: 36 (3 + 4 + 29)
+                SetPositionsDataWriter(player, (long) playerId, ++playerCount);
             }
-            
-            if (playerIdle || _syncCount >= _playersDictionary.Count) return;
-            
-            connectedPeer.Send(DataWriter, deliveryMethod);
-            _syncCount++;
         }
         
-        private void SetDataWriter(Player player, long playerId)
+        private void SetPositionsDataWriter(Player player, long playerId, int playerCount)
         {
             if (IsSerialized)
             {
 //                _BasePacket.IsCompressed = false;
                 
                 var positionPacket = new PositionPacket(
-                    (int) player.ActionType, 
-                    (int) ObjectTypes.Player, 
-                    playerId, 
-                    player.IsLocal, 
+                    (int) player.ActionType, // 4 bytes new
+                    (int) ObjectTypes.Player, // 4 bytes
+                    playerId, // 8 bytes
+                    player.IsLocal, // 1 byte
                     
-                    player.X, player.Y, player.Z
+                    player.X, player.Y, player.Z // 12 bytes
                 );
                 
-                var packetBytes = positionPacket.ToByteArray(); // 23 bytes
+                var positionPacketBytes = positionPacket.ToByteArray(); // 28 bytes
                 
-                DataWriter.Put(packetBytes);
+                DataWriter.Put(positionPacketBytes);
+                
+                var positionPacketBytesSize = DataWriter.Length - _packetType.GetSize();
+                var positionPacketTotalBytesSize = positionPacketBytesSize / playerCount;
+                
+                LogService.Log(
+                    $"{_packetType} Packet (SEND) [{positionPacketTotalBytesSize} bytes]: " +
+                    $"ActionType: {(ActionTypes) positionPacket.ActionType}, " + 
+                    $"ObjectType: {(ObjectTypes) positionPacket.ObjectType}, " + 
+                    $"Id: {positionPacket.Id}, " + 
+                    $"IsLocal: {positionPacket.IsLocal}, " + 
+                    $"Position: ({positionPacket.X}, " + $"{positionPacket.Y}, " + $"{positionPacket.Z})"
+                );
             }
             else
             {
 #if DEBUG
-                // un-serialized total: 25 bytes
+                // un-serialized total: 29 bytes
                 
                 DataWriter.Put((int) player.ActionType); // 4 bytes new
                 DataWriter.Put((int) ObjectTypes.Player); // 4 bytes
@@ -295,6 +370,18 @@ namespace prototype_server.Controllers
                 DataWriter.Put(player.X); // 4 bytes
                 DataWriter.Put(player.Y); // 4 bytes
                 DataWriter.Put(player.Z); // 4 bytes
+                
+                var positionPacketBytesSize = DataWriter.Length - _packetType.GetSize();
+                var positionPacketTotalBytesSize = positionPacketBytesSize / playerCount;
+                
+                LogService.Log(
+                    $"{_packetType} Packet (SEND) [{positionPacketTotalBytesSize} bytes]: " +
+                    $"ActionType: {player.ActionType}, " + 
+                    $"ObjectType: {player.ObjectType}, " + 
+                    $"Id: {playerId}, " + 
+                    $"IsLocal: {player.IsLocal}, " + 
+                    $"Position: ({player.X}, " + $"{player.Y}, " + $"{player.Z})"
+                );
 #endif
             }
         }
@@ -305,7 +392,7 @@ namespace prototype_server.Controllers
             
             foreach(var (_, player) in _playersDictionary)
             {
-                player.IsLocal = false;
+                player.IsLocal = true;
                 player.Spawned = false;
                 player.Moved = false;
                 player.Idle = true;

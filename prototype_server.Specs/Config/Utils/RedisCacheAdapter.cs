@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using prototype_server.DB;
+using prototype_services.Common;
 
 namespace prototype_server.Specs.Config.Utils
 {
@@ -21,7 +22,7 @@ namespace prototype_server.Specs.Config.Utils
             }
             catch (KeyNotFoundException exc)
             {
-                Console.WriteLine(exc);
+                LogService.LogError(exc);
                 return null;
             }
         }
@@ -39,7 +40,7 @@ namespace prototype_server.Specs.Config.Utils
             }
             catch (KeyNotFoundException exc)
             {
-                Console.WriteLine(exc);
+                LogService.LogError(exc);
             }
         }
     }

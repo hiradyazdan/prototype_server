@@ -1,36 +1,51 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using LiteNetLib;
 using Microsoft.Extensions.Configuration;
 
-using prototype_server.Config;
+using prototype_config;
+using prototype_services.Interfaces;
+using prototype_services.Common;
 
 namespace prototype_server
 {
-    public static class Program
+    public class Program
     {
+        private readonly ILogService _logService;
+        
         public static void Main(string[] args)
         {
+            var program = new Program();
+            
             var config = Configuration.Initialize(args);
-            var routes = new Routes(config);
+            var routes = new Routes(config, program._logService);
             var server = new NetManager(routes);
             
             routes.ServerInstance = server;
             
-            Run(server, routes);
+            program.Run(server, routes);
             
             Console.ReadKey();
         }
-
-        private static void Run(NetManager server, RoutesBase routes)
+        
+        private Program()
+        {
+            _logService = new LogService(false, true)
+            {
+                LogScope = this
+            };
+        }
+        
+        private void Run(NetManager server, RoutesBase routes)
         {
             if (server.Start(15000))
             {
-                Console.WriteLine("Server started listening on port 15000");
+                _logService.Log("Server started listening on port 15000");
             }
             else
             {
-                Console.Error.WriteLine("Server could not start!");
+                _logService.LogError("Server could not start!");
                 return;
             }
 
@@ -57,6 +72,16 @@ namespace prototype_server
             
             return configuration.GetValue<string>(key)?.CaseInsensitiveContains("true") ?? 
                    configVars.GetSection(key).Value.CaseInsensitiveContains("true");
+        }
+        
+        internal static int GetSize(this object obj)
+        {
+            var objectType = obj.GetType();
+            
+            objectType = obj is Enum ? Enum.GetUnderlyingType(objectType) : objectType;
+            
+            // Unmanaged object
+            return Marshal.SizeOf(objectType);
         }
     }
 }

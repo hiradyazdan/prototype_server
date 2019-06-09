@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using prototype_server.DB;
+using prototype_services.Interfaces;
 
 namespace prototype_server.Controllers
 {
@@ -10,12 +11,12 @@ namespace prototype_server.Controllers
     {
         protected readonly bool IsSerialized;
 
-        protected ApplicationController(IServiceScope scope, RedisCache redis) : base(scope, redis)
+        protected ApplicationController(IServiceScope scope, RedisCache redis, ILogService logService) : base(scope, redis, logService)
         {
             IsSerialized = Config.IsConfigActive("serializePackets");
 
 #if DEBUG
-            Console.WriteLine("Serialize Packets: " + IsSerialized);
+            LogService.Log("Serialize Packets: " + IsSerialized);
 #endif
         }
 

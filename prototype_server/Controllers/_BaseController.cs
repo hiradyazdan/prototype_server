@@ -1,18 +1,23 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using LiteNetLib.Utils;
 using Microsoft.Extensions.Configuration;
 
-using prototype_server.Config;
+using prototype_config;
 using prototype_server.DB;
-using prototype_server.Models;
+using prototype_services.Interfaces;
 
 namespace prototype_server.Controllers
 {
-    public abstract class _BaseController
+    public interface IController
+    {
+        
+    }
+    
+    public abstract class _BaseController : IController
     {
         public NetDataWriter DataWriter { get; }
 
+        protected readonly ILogService LogService;
         protected readonly IConfiguration Config;
         protected readonly IConfigurationSection ConfigVars;
         protected readonly RedisCache Redis;
@@ -20,8 +25,11 @@ namespace prototype_server.Controllers
         protected readonly bool IsClearDatabaseActive;
         protected readonly IServiceScope Scope;
         
-        protected _BaseController(IServiceScope scope, RedisCache redis)
+        protected _BaseController(IServiceScope scope, RedisCache redis, ILogService logService)
         {
+            LogService = logService;
+            LogService.LogScope = this;
+            
             Scope = scope;
             Config = Configuration.SharedInstance;
             ConfigVars = Config.GetSection("config:vars");
