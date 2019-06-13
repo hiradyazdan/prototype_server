@@ -8,6 +8,7 @@ using LiteNetLib;
 using prototype_config;
 using prototype_server.Controllers;
 using prototype_server.DB;
+using prototype_services;
 using prototype_services.Common;
 using prototype_services.Interfaces;
 
@@ -21,16 +22,15 @@ namespace prototype_server
         
         private readonly PlayerController _playerCtrl;
         
-        public Routes(IConfiguration configuration, ILogService logService)
+        public Routes(ServiceConfiguration serviceConfig)
         {
-            var svcConfig = ServiceConfiguration.Initialize(configuration);
-            var scope = svcConfig.ServiceProvider.CreateScope();
-            var redisCache = svcConfig.ServiceProvider.GetRequiredService<RedisCache>();
+            var scope = serviceConfig.ServiceProvider.CreateScope();
+            var redisCache = serviceConfig.ServiceProvider.GetRequiredService<RedisCache>();
             
-            _logService = logService;
+            _logService = serviceConfig.SharedServices.Log;
             _logService.LogScope = this;
             
-            _playerCtrl = new PlayerController(scope, redisCache, _logService);
+            _playerCtrl = new PlayerController(scope, redisCache);
         }
 
         public override void OnPeerConnected(NetPeer peer)

@@ -27,7 +27,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
     {
         private PlayerController _subject;
         private RedisCache _redisCache;
-        private ILogService _logService;
         private Player _playerMock;
         private NetPeer _peerMock;
         private long _peerId;
@@ -39,7 +38,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             
             _peerId = peerEndpoint;
             _redisCache = new RedisCache("localhost");
-            _logService = new LogService(false);
             
             _peerMock = Helpers.GetPeerMock(ipEndpointMock);
             _playerMock = new Player(_peerMock)
@@ -70,7 +68,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
                      .Returns(playerModelRepoMock.Object);
 
-            _subject = new PlayerController(scopeMock.Object, _redisCache, _logService);
+            _subject = new PlayerController(scopeMock.Object, _redisCache);
 
             _subject.OnPeerConnected(_peerMock);
             
@@ -98,7 +96,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
     {   
         private PlayerController _subject;
         private RedisCache _redisCache;
-        private ILogService _logService;
         private Player _playerMock;
         private NetPeer _peerMock;
         
@@ -113,7 +110,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                                          sizeof(float) * 3;
             
             _redisCache = new RedisCache("localhost");
-            _logService = new LogService(false);
             
             _peerMock = Helpers.GetPeerMock(ipEndpointMock);
             _playerMock = new Player(_peerMock)
@@ -138,7 +134,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
                      .Returns(playerModelRepoMock.Object);
 
-            _subject = new PlayerController(scopeMock.Object, _redisCache, _logService);
+            _subject = new PlayerController(scopeMock.Object, _redisCache);
 
             _subject.OnPeerConnected(_peerMock);
             
@@ -161,7 +157,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
     {   
         private PlayerController _subject;
         private RedisCache _redisCache;
-        private ILogService _logService;
         private Player _playerMock;
         private NetPeer _peerMock;
         
@@ -177,7 +172,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                                          sizeof(float) * 3;
             
             _redisCache = new RedisCache("localhost");
-            _logService = new LogService(false);
             _peerMock = Helpers.GetPeerMock(ipEndpointMock);
             _playerMock = new Player(_peerMock)
             {
@@ -201,7 +195,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
                      .Returns(playerModelRepoMock.Object);
 
-            _subject = new PlayerController(scopeMock.Object, _redisCache, _logService);
+            _subject = new PlayerController(scopeMock.Object, _redisCache);
 
             _subject.OnPeerConnected(_peerMock);
             

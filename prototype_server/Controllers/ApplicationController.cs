@@ -11,7 +11,7 @@ namespace prototype_server.Controllers
     {
         protected readonly bool IsSerialized;
 
-        protected ApplicationController(IServiceScope scope, RedisCache redis, ILogService logService) : base(scope, redis, logService)
+        protected ApplicationController(IServiceScope scope, IRedisCache redis) : base(scope, redis)
         {
             IsSerialized = Config.IsConfigActive("serializePackets");
 

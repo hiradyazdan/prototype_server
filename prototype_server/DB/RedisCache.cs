@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using prototype_config;
 using prototype_services.Common;
 using prototype_services.Interfaces;
 using StackExchange.Redis;
@@ -24,10 +25,9 @@ namespace prototype_server.DB
         
         public RedisCache(string connectionString)
         {
-            LogService = new LogService(false, true)
-            {
-                LogScope = this
-            };
+            var services = ServiceConfiguration.Initialize().SharedServices;
+            
+            LogService = services.Log;
 
             _connectionString = connectionString;
             

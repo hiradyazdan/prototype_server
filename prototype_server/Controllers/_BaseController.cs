@@ -20,14 +20,16 @@ namespace prototype_server.Controllers
         protected readonly ILogService LogService;
         protected readonly IConfiguration Config;
         protected readonly IConfigurationSection ConfigVars;
-        protected readonly RedisCache Redis;
+        protected readonly IRedisCache Redis;
 
         protected readonly bool IsClearDatabaseActive;
         protected readonly IServiceScope Scope;
         
-        protected _BaseController(IServiceScope scope, RedisCache redis, ILogService logService)
+        protected _BaseController(IServiceScope scope, IRedisCache redis)
         {
-            LogService = logService;
+            var services = ServiceConfiguration.SharedInstance.SharedServices;
+            
+            LogService = services.Log;
             LogService.LogScope = this;
             
             Scope = scope;

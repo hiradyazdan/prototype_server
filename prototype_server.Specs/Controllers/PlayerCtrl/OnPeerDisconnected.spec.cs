@@ -18,7 +18,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
 {   
     public class WhenPlayerGetsDisconnected : ScenarioFor<PlayerController>
     {
-        private ILogService _logService;
         private PlayerController _subject;
         private RedisCacheAdapter _redisCacheAdapter;
         private Player _playerMock;
@@ -44,7 +43,6 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                                     sizeof(bool) + 
                                     sizeof(float) * 3;
             
-            _logService = new LogService(false);
             _peerMock = Helpers.GetPeerMock(ipEndpointMock);
             _playerMock = new Player(_peerMock)
             {
@@ -66,7 +64,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             
             _redisCacheAdapter = new RedisCacheAdapter("localhost");
 
-            _subject = new PlayerController(scopeMock.Object, _redisCacheAdapter, _logService);
+            _subject = new PlayerController(scopeMock.Object, _redisCacheAdapter);
             
             _subject.OnPeerConnected(_peerMock);
 

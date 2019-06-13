@@ -24,7 +24,7 @@ namespace prototype_server.Controllers
         private bool _playerIdle;
         private int _syncCount;
 
-        public PlayerController(IServiceScope scope, RedisCache redis, ILogService logService) : base(scope, redis, logService)
+        public PlayerController(IServiceScope scope, IRedisCache redis) : base(scope, redis)
         {
             _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
             _playersDictionary = new Dictionary<Guid, Player>();

@@ -5,6 +5,7 @@ using LiteNetLib;
 using Microsoft.Extensions.Configuration;
 
 using prototype_config;
+using prototype_services;
 using prototype_services.Interfaces;
 using prototype_services.Common;
 
@@ -16,10 +17,12 @@ namespace prototype_server
         
         public static void Main(string[] args)
         {
-            var program = new Program();
-            
             var config = Configuration.Initialize(args);
-            var routes = new Routes(config, program._logService);
+            var serviceConfig = ServiceConfiguration.Initialize(config);
+            
+            var program = new Program(serviceConfig);
+            
+            var routes = new Routes(serviceConfig);
             var server = new NetManager(routes);
             
             routes.ServerInstance = server;
@@ -29,12 +32,10 @@ namespace prototype_server
             Console.ReadKey();
         }
         
-        private Program()
+        private Program(ServiceConfiguration serviceConfig)
         {
-            _logService = new LogService(false, true)
-            {
-                LogScope = this
-            };
+            _logService = serviceConfig.SharedServices.Log;
+            _logService.LogScope = this;
         }
         
         private void Run(NetManager server, RoutesBase routes)
