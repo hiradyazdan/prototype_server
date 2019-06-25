@@ -15,9 +15,10 @@ namespace prototype_server.Controllers
     
     public abstract class _BaseController : IController
     {
-        public NetDataWriter DataWriter { get; }
+//        public NetDataWriter DataWriter { get; }
 
         protected readonly ILogService LogService;
+        protected readonly INetworkService NetworkService;
         protected readonly IConfiguration Config;
         protected readonly IConfigurationSection ConfigVars;
         protected readonly IRedisCache Redis;
@@ -27,17 +28,18 @@ namespace prototype_server.Controllers
         
         protected _BaseController(IServiceScope scope, IRedisCache redis)
         {
+            Scope = scope;
+            Config = AppConfiguration.SharedInstance;
+            ConfigVars = Config.GetSection("config:vars");
+            
             var services = ServiceConfiguration.SharedInstance.SharedServices;
             
             LogService = services.Log;
+            NetworkService = services.Network;
+            
             LogService.LogScope = this;
             
-            Scope = scope;
-            Config = Configuration.SharedInstance;
-            ConfigVars = Config.GetSection("config:vars");
-
             Redis = redis;
-            DataWriter = new NetDataWriter();
         }
     }
 }

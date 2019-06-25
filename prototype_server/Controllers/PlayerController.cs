@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Numerics;
+
 using Microsoft.Extensions.DependencyInjection;
+
 using LiteNetLib;
 using LiteNetLib.Utils;
 
 using prototype_config;
+using prototype_serializers;
 using prototype_serializers.Packets;
-using prototype_serializers.Debug;
 using prototype_server.DB;
 using prototype_server.Models;
-using prototype_services.Interfaces;
 
 namespace prototype_server.Controllers
 {   
@@ -19,6 +20,7 @@ namespace prototype_server.Controllers
     {
         private readonly IRepository<Player> _playerModel;
         private readonly Dictionary<Guid, Player> _playersDictionary;
+        private readonly SerializerConfiguration _serializerConfiguration;
         
         private PacketTypes _packetType;
         private bool _playerIdle;
@@ -28,6 +30,10 @@ namespace prototype_server.Controllers
         {
             _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
             _playersDictionary = new Dictionary<Guid, Player>();
+            
+            _serializerConfiguration = SerializerConfiguration.Initialize(IsSerialized);
+            
+            LogService.LogScopeLock = this;
         }
         
         public void OnPeerConnected(NetPeer peer)
@@ -115,17 +121,25 @@ namespace prototype_server.Controllers
             _playersDictionary.Remove(playerGuid);
         }
         
-        public void OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+        public void OnNetworkReceive(NetPeer peer, NetPacketReader packetReader, DeliveryMethod deliveryMethod)
         {
             const int deliveryMethodHeaderSize = 3;
-            const int expectedPacketSize = sizeof(int) * 3 + sizeof(long) + sizeof(bool) + sizeof(float) * 3;
+            
+            var reader = NetworkService.GetPacketReader(packetReader);
+            
+            var packetType = NetworkService.GetPacketType(reader); // 4 bytes
+            
+            var expectedPacketSize = _serializerConfiguration.GetExpectedStateSize(packetType) + 
+                                     sizeof(PacketTypes) + // 4 bytes
+                                     deliveryMethodHeaderSize; // 3 bytes
+            
+            LogService.Log($"{packetType} packet expected size: {expectedPacketSize}");
+            LogService.Log($"{packetType} packet actual size: {reader.RawDataSize}");
             
             // Not sure if there's any point for this as it will always be a byte[] with some size
             if (reader.RawData == null) return;
-            if (reader.RawDataSize - deliveryMethodHeaderSize != expectedPacketSize) return;
+            if (reader.RawDataSize != expectedPacketSize) return;
             
-            var packetType = (PacketTypes) reader.GetInt(); // 4 bytes
-
             switch (packetType)
             {
                 case PacketTypes.Position:
@@ -140,7 +154,7 @@ namespace prototype_server.Controllers
                     throw new ArgumentOutOfRangeException(nameof(packetType), packetType, null);
             }
         }
-
+        
         private void SetProfile()
         {
             
@@ -150,18 +164,19 @@ namespace prototype_server.Controllers
         {
             const PacketTypes packetType = PacketTypes.Position;
             
-            var positionPacket = IsSerialized 
-                ? new PositionPacket(reader.GetRemainingBytes())
-                : (IPositionPacket) new PositionPacketDebug(reader);
+            var stateBytes = reader.GetRemainingBytes();
+            var statesCount = stateBytes.Length / _serializerConfiguration.GetExpectedStateSize(packetType);
             
-            var actionType = (ActionTypes) positionPacket.ActionType;
-            var objectType = (ObjectTypes) positionPacket.ObjectType;
+            var positionState = NetworkService.ReadStates<PositionSerializer, PositionPacket>(stateBytes, statesCount)[0];
             
-            var isLocal = positionPacket.IsLocal;
+            var actionType = (ActionTypes) positionState.ActionType;
+            var objectType = (ObjectTypes) positionState.ObjectType;
             
-            var x = positionPacket.X;
-            var y = positionPacket.Y;
-            var z = positionPacket.Z;
+            var isLocal = positionState.IsLocal;
+            
+            var x = positionState.X;
+            var y = positionState.Y;
+            var z = positionState.Z;
             
             var peerEndpoint = peer.EndPoint;
             var addressBytes = peerEndpoint.Address.GetAddressBytes();
@@ -229,11 +244,13 @@ namespace prototype_server.Controllers
         private void SyncWithConnectedPeer(NetPeer connectedPeer, ActionTypes actionType, bool onPeerConnected = true)
         {
             var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced; // 3 bytes
+            var headerSize = deliveryMethod.GetSize() - 1; // header size is 3 bytes
+            var dataWriter = NetworkService.DataWriter;
+            
             _playerIdle = true;
             
-            DataWriter.Reset();
-            Array.Clear(DataWriter.Data, 0, DataWriter.Data.Length);
-
+            NetworkService.ResetDataWriter();
+            
             switch (actionType)
             {
                 case ActionTypes.Spawn:
@@ -245,7 +262,7 @@ namespace prototype_server.Controllers
                 default:
                     throw new ArgumentOutOfRangeException(nameof(actionType), actionType, null);
             }
-
+            
             switch (_packetType)
             {
                 case PacketTypes.Positions:
@@ -262,13 +279,13 @@ namespace prototype_server.Controllers
             
             LogService.Log(
                 $"{(IsSerialized ? "" : "Un-")}Serialized " + 
-                $"{_packetType} RawDataSize: {DataWriter.Length + deliveryMethod.GetSize() - 1}" // header size is 3 bytes
+                $"{_packetType} RawDataSize: {dataWriter.Length + headerSize}"
             );
             
-            connectedPeer.Send(DataWriter, deliveryMethod);
+            connectedPeer.Send(dataWriter, deliveryMethod);
             _syncCount++;
         }
-
+        
         private void SetPositions(NetPeer connectedPeer, bool onPeerConnected)
         {
             var peerEndpoint = connectedPeer.EndPoint;
@@ -281,8 +298,8 @@ namespace prototype_server.Controllers
 #else
             long peerId = BitConverter.ToUInt32(peerAddressBytes, 0);
 #endif
-            DataWriter.Put((int) _packetType); // 4 bytes
-
+            NetworkService.WriteStates((int) _packetType); // 4 bytes
+            
             var playerCount = 0;
             
             foreach (var (_, player) in _playersDictionary)
@@ -320,70 +337,25 @@ namespace prototype_server.Controllers
                 
                 // serialized size: 30 (3 + 4 + 23)
                 // un-serialized size: 36 (3 + 4 + 29)
-                SetPositionsDataWriter(player, (long) playerId, ++playerCount);
+                WritePositions(player, (long) playerId, ++playerCount, onPeerConnected);
             }
         }
         
-        private void SetPositionsDataWriter(Player player, long playerId, int playerCount)
+        private void WritePositions(Player player, long playerId, int playerCount, bool onPeerConnected)
         {
-            if (IsSerialized)
-            {
-//                _BasePacket.IsCompressed = false;
+            var isReadyToSerialize = playerCount == _playersDictionary.Count || !onPeerConnected;
+            var position = new Vector3(player.X, player.Y, player.Z);
+            
+            NetworkService.WriteStates<PositionSerializer, PositionPacket>(
+                isReadyToSerialize,
                 
-                var positionPacket = new PositionPacket(
-                    (int) player.ActionType, // 4 bytes new
-                    (int) ObjectTypes.Player, // 4 bytes
-                    playerId, // 8 bytes
-                    player.IsLocal, // 1 byte
-                    
-                    player.X, player.Y, player.Z // 12 bytes
-                );
+                (int) player.ActionType, // 4 bytes
+                (int) player.ObjectType, // 4 bytes
+                playerId, // 8 bytes
+                player.IsLocal, // 1 byte
                 
-                var positionPacketBytes = positionPacket.ToByteArray(); // 28 bytes
-                
-                DataWriter.Put(positionPacketBytes);
-                
-                var positionPacketBytesSize = DataWriter.Length - _packetType.GetSize();
-                var positionPacketTotalBytesSize = positionPacketBytesSize / playerCount;
-                
-                LogService.Log(
-                    $"{_packetType} Packet (SEND) [{positionPacketTotalBytesSize} bytes]: " +
-                    $"ActionType: {(ActionTypes) positionPacket.ActionType}, " + 
-                    $"ObjectType: {(ObjectTypes) positionPacket.ObjectType}, " + 
-                    $"Id: {positionPacket.Id}, " + 
-                    $"IsLocal: {positionPacket.IsLocal}, " + 
-                    $"Position: ({positionPacket.X}, " + $"{positionPacket.Y}, " + $"{positionPacket.Z})"
-                );
-            }
-            else
-            {
-#if DEBUG
-                // un-serialized total: 29 bytes
-                
-                DataWriter.Put((int) player.ActionType); // 4 bytes new
-                DataWriter.Put((int) ObjectTypes.Player); // 4 bytes
-                
-                DataWriter.Put(playerId); // 8 bytes
-                
-                DataWriter.Put(player.IsLocal); // 1 byte
-                
-                DataWriter.Put(player.X); // 4 bytes
-                DataWriter.Put(player.Y); // 4 bytes
-                DataWriter.Put(player.Z); // 4 bytes
-                
-                var positionPacketBytesSize = DataWriter.Length - _packetType.GetSize();
-                var positionPacketTotalBytesSize = positionPacketBytesSize / playerCount;
-                
-                LogService.Log(
-                    $"{_packetType} Packet (SEND) [{positionPacketTotalBytesSize} bytes]: " +
-                    $"ActionType: {player.ActionType}, " + 
-                    $"ObjectType: {player.ObjectType}, " + 
-                    $"Id: {playerId}, " + 
-                    $"IsLocal: {player.IsLocal}, " + 
-                    $"Position: ({player.X}, " + $"{player.Y}, " + $"{player.Z})"
-                );
-#endif
-            }
+                position // 4 * 3 = 12 bytes
+            );
         }
         
         private void ResetPlayersStatus()

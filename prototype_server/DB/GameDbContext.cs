@@ -14,7 +14,7 @@ namespace prototype_server.DB
     {
         public GameDbContext CreateDbContext(string[] args)
         {
-            var config = Configuration.Initialize(args);
+            var config = AppConfiguration.Initialize(args);
             var svcConfig = ServiceConfiguration.Initialize(config);
             
             return svcConfig.ServiceProvider.GetService<GameDbContext>();

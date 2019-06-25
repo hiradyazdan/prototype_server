@@ -9,7 +9,7 @@
     <ItemGroup>
       <PackageReference Include="LiteNetLib" Version="0.8.3" />
       <PackageReference Include="MessagePack" Version="1.7.3.7" />
-      <PackageReference Include="MessagePack.UnityShims" Version="1.7.3.7" />
+<!--      <PackageReference Include="MessagePack.UnityShims" Version="1.7.3.7" />-->
       <PackageReference Include="MessagePackAnalyzer" Version="1.6.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.2" />
       <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="2.2.0" />
@@ -20,6 +20,7 @@
       <PackageReference Include="MySql.Data" Version="8.0.15" />
       <PackageReference Include="MySql.Data.EntityFrameworkCore" Version="8.0.15" />
       <PackageReference Include="StackExchange.Redis" Version="2.0.601" />
+      <PackageReference Include="System.CodeDom" Version="4.5.0" />
     </ItemGroup>
 
     <Import Project="..\..\prototype_config\prototype_config\prototype_config.projitems" Label="Shared" />
