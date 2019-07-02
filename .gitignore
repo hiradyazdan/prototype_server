@@ -4,5 +4,6 @@ bin/
 *.user
 *.pdb
 *.dll
+*.DotSettings
 .DS_Store
 appsettings.*.json

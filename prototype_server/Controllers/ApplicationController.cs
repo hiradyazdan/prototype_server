@@ -8,25 +8,16 @@ namespace prototype_server.Controllers
 {
     public class ApplicationController : _BaseController
     {
+        protected readonly bool IsClientDebug;
         protected readonly bool IsSerialized;
 
         protected ApplicationController(IServiceScope scope, IRedisCache redis) : base(scope, redis)
         {
+            IsClientDebug = Config.IsConfigActive("clientDebug");
             IsSerialized = Config.IsConfigActive("serializePackets");
             
+            LogService.Log("Client Debug: " + IsClientDebug);
             LogService.Log("Serialize Packets: " + IsSerialized);
-        }
-
-        protected static Guid ConvertBytesToGuid(byte[] valueBytes)
-        {
-            const int guidByteSize = 16;
-
-            if (valueBytes.Length != guidByteSize)
-            {
-                Array.Resize(ref valueBytes, guidByteSize);
-            }
-
-            return new Guid(valueBytes);
         }
     }
 }

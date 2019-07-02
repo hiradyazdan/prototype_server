@@ -31,7 +31,7 @@ namespace prototype_server.Controllers
             _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
             _playersDictionary = new Dictionary<Guid, Player>();
             
-            _serializerConfiguration = SerializerConfiguration.Initialize(IsSerialized);
+            _serializerConfiguration = SerializerConfiguration.Initialize(IsSerialized, IsClientDebug);
             
             LogService.LogScopeLock = this;
         }
@@ -41,15 +41,15 @@ namespace prototype_server.Controllers
             LogService.Log("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
             
             var addressBytes = peer.EndPoint.Address.GetAddressBytes();
-#if DEBUG
             var portBytes = BitConverter.GetBytes(peer.EndPoint.Port);
-            var playerGuid = ConvertBytesToGuid(addressBytes.Concat(portBytes).ToArray());
-#else
-            // GUID is exactly 16 bytes or and 36 character in length
-            // IP address max size is 16 bytes,
-            // therefore the generated guid size won't ever be more than 16 bytes
-            var playerGuid = ConvertBytesToGuid(addressBytes);
-#endif
+            var playerGuid = IsClientDebug 
+                ? addressBytes.Concat(portBytes).ToArray().ConvertToGuid()
+                
+                // GUID is exactly 16 bytes or and 36 character in length
+                // IP address max size is 16 bytes,
+                // therefore the generated guid size won't ever be more than 16 bytes
+                : addressBytes.ConvertToGuid();
+            
             Player newPlayer = null;
             
             if (!_playersDictionary.ContainsKey(playerGuid))
@@ -99,15 +99,14 @@ namespace prototype_server.Controllers
             );
             
             var addressBytes = peer.EndPoint.Address.GetAddressBytes();
-#if DEBUG
             var portBytes = BitConverter.GetBytes(peer.EndPoint.Port);
-            var playerGuid = ConvertBytesToGuid(addressBytes.Concat(portBytes).ToArray());
-#else
-            // GUID is exactly 16 bytes or and 36 character in length
-            // IP address max size is 16 bytes,
-            // therefore the generated guid size won't ever be more than 16 bytes
-            var playerGuid = ConvertBytesToGuid(addressBytes);
-#endif
+            var playerGuid = IsClientDebug 
+                ? addressBytes.Concat(portBytes).ToArray().ConvertToGuid()
+                
+                // GUID is exactly 16 bytes or and 36 character in length
+                // IP address max size is 16 bytes,
+                // therefore the generated guid size won't ever be more than 16 bytes
+                : addressBytes.ConvertToGuid();
             
             // Why checking this?!
             if (!_playersDictionary.ContainsKey(playerGuid)) return;
@@ -180,25 +179,22 @@ namespace prototype_server.Controllers
             
             var peerEndpoint = peer.EndPoint;
             var addressBytes = peerEndpoint.Address.GetAddressBytes();
-#if DEBUG
-            var portBytes = BitConverter.GetBytes(peerEndpoint.Port);
-            var playerGuid = ConvertBytesToGuid(addressBytes.Concat(portBytes).ToArray());
+            var portBytes = BitConverter.GetBytes(peer.EndPoint.Port);
+            var playerGuid = IsClientDebug 
+                ? addressBytes.Concat(portBytes).ToArray().ConvertToGuid()
+                
+                // GUID is exactly 16 bytes or and 36 character in length
+                // IP address max size is 16 bytes,
+                // therefore the generated guid size won't ever be more than 16 bytes
+                : addressBytes.ConvertToGuid();
             
             LogService.Log(
-                $"{packetType} [{peerEndpoint.Address}:{peerEndpoint.Port}]: " +
+                (IsClientDebug 
+                    ? $"{packetType} [{peerEndpoint.Address}:{peerEndpoint.Port}]: " 
+                    : $"{packetType} [{playerGuid}]: ") + 
                 $"(x: {x}, y: {y}, z: {z})"
             );
-#else
-            // GUID is exactly 16 bytes or and 36 character in length
-            // IP address max size is 16 bytes,
-            // therefore the generated guid size won't ever be more than 16 bytes
-            var playerGuid = ConvertBytesToGuid(addressBytes);
             
-            LogService.Log(
-                $"{packetType} [{playerGuid}]: " +
-                $"(x: {x}, y: {y}, z: {z})"
-            );
-#endif
             var isSpawned = actionType == ActionTypes.Spawn;
             var isMoved = actionType == ActionTypes.Move;
             
@@ -263,6 +259,8 @@ namespace prototype_server.Controllers
                     throw new ArgumentOutOfRangeException(nameof(actionType), actionType, null);
             }
             
+            NetworkService.WriteStates((int) _packetType); // 4 bytes
+            
             switch (_packetType)
             {
                 case PacketTypes.Positions:
@@ -285,20 +283,25 @@ namespace prototype_server.Controllers
             connectedPeer.Send(dataWriter, deliveryMethod);
             _syncCount++;
         }
-        
+
         private void SetPositions(NetPeer connectedPeer, bool onPeerConnected)
         {
             var peerEndpoint = connectedPeer.EndPoint;
             var peerAddressBytes = peerEndpoint.Address.GetAddressBytes();
-#if DEBUG
-            var peerPortBytes = BitConverter.GetBytes(peerEndpoint.Port);
-            var peerEndpointBytes = peerAddressBytes.Concat(peerPortBytes).ToArray();
             
-            var peerId = BitConverter.ToUInt64(peerEndpointBytes, 0);
-#else
-            long peerId = BitConverter.ToUInt32(peerAddressBytes, 0);
-#endif
-            NetworkService.WriteStates((int) _packetType); // 4 bytes
+            ulong peerId;
+            
+            if (IsClientDebug)
+            {
+                var peerPortBytes = BitConverter.GetBytes(peerEndpoint.Port);
+                var peerEndpointBytes = peerAddressBytes.Concat(peerPortBytes).ToArray();
+                
+                peerId = BitConverter.ToUInt64(peerEndpointBytes, 0);
+            }
+            else
+            {
+                peerId = BitConverter.ToUInt32(peerAddressBytes, 0);
+            }
             
             var playerCount = 0;
             
@@ -306,14 +309,21 @@ namespace prototype_server.Controllers
             {
                 var playerEndpoint = player.Peer.EndPoint;
                 var playerAddressBytes = playerEndpoint.Address.GetAddressBytes();
-#if DEBUG
-                var playerPortBytes = BitConverter.GetBytes(playerEndpoint.Port);
-                var playerEndpointBytes = playerAddressBytes.Concat(playerPortBytes).ToArray();
                 
-                var playerId = BitConverter.ToUInt64(playerEndpointBytes, 0);
-#else
-                long playerId = BitConverter.ToUInt32(playerAddressBytes, 0);
-#endif
+                ulong playerId;
+                
+                if (IsClientDebug)
+                {
+                    var playerPortBytes = BitConverter.GetBytes(playerEndpoint.Port);
+                    var playerEndpointBytes = playerAddressBytes.Concat(playerPortBytes).ToArray();
+                    
+                    playerId = BitConverter.ToUInt64(playerEndpointBytes, 0);
+                }
+                else
+                {
+                    playerId = BitConverter.ToUInt32(playerAddressBytes, 0);
+                }
+                
                 player.IsLocal = playerId == peerId;
                 
                 if (!onPeerConnected)
@@ -335,8 +345,6 @@ namespace prototype_server.Controllers
                     _playerIdle = false;
                 }
                 
-                // serialized size: 30 (3 + 4 + 23)
-                // un-serialized size: 36 (3 + 4 + 29)
                 WritePositions(player, (long) playerId, ++playerCount, onPeerConnected);
             }
         }
