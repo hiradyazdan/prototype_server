@@ -6,8 +6,8 @@ using LiteNetLib;
 using Moq;
 
 using prototype_server.Controllers;
-using prototype_server.DB;
-using prototype_server.Models;
+using prototype_storage;
+using prototype_models.OOD;
 using prototype_server.Specs.Config;
 using prototype_server.Specs.Config.Utils;
 using prototype_server.Specs.Config.Utils.Helpers;

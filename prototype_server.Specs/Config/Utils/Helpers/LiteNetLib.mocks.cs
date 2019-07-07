@@ -4,7 +4,7 @@ using System.Reflection;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using Moq;
-using prototype_server.Models;
+using prototype_models.OOD;
 using prototype_server.Specs.Controllers.PlayerCtrl;
 
 namespace prototype_server.Specs.Config.Utils.Helpers

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using prototype_server.DB;
+using prototype_storage;
 using prototype_services.Common;
 
 namespace prototype_server.Specs.Config.Utils
