@@ -2,15 +2,17 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server", "prototype_server\prototype_server.csproj", "{71A9BE76-A2C8-4977-9D92-9458EC0518FE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Specs", "prototype_server.Specs\prototype_server.Specs.csproj", "{9C535683-51AC-408A-AF0E-5406F4C81277}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_config", "..\prototype_config\prototype_config\prototype_config.shproj", "{DF4EA7DB-9414-48A2-B593-639175DCBC7F}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_storage", "..\prototype_storage\prototype_storage\prototype_storage.shproj", "{DB0B6353-88CB-46C0-94FF-E92BF1D6A494}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_models", "..\prototype_models\prototype_models\prototype_models.shproj", "{1C139FF6-DFA0-48A6-9309-F29929E71CCB}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_serializers", "..\prototype_serializers\prototype_serializers\prototype_serializers.shproj", "{550BEBE4-02E5-428C-BF21-DAE40B54C6D8}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_services", "..\prototype_services\prototype_services\prototype_services.shproj", "{17C948C2-A9E2-4F2A-B891-58A8737B4F6D}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_config", "..\prototype_config\prototype_config\prototype_config.shproj", "{DF4EA7DB-9414-48A2-B593-639175DCBC7F}"
-EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_storage", "..\prototype_storage\prototype_storage\prototype_storage.shproj", "{DB0B6353-88CB-46C0-94FF-E92BF1D6A494}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Specs", "prototype_server.Specs\prototype_server.Specs.csproj", "{9C535683-51AC-408A-AF0E-5406F4C81277}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

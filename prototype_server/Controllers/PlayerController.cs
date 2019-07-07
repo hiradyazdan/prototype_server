@@ -12,7 +12,7 @@ using prototype_config;
 using prototype_serializers;
 using prototype_serializers.Packets;
 using prototype_storage;
-using prototype_server.Models;
+using prototype_models.OOD;
 
 namespace prototype_server.Controllers
 {   
