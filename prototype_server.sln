@@ -14,6 +14,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_services", "..\pr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Specs", "prototype_server.Specs\prototype_server.Specs.csproj", "{9C535683-51AC-408A-AF0E-5406F4C81277}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Benchmark", "prototype_server.Benchmark\prototype_server.Benchmark.csproj", "{E6F16F5F-584E-4A15-83DB-9CC9B9A51E10}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
