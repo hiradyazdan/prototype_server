@@ -29,4 +29,6 @@
 
     <Import Project="..\..\prototype_services\prototype_services\prototype_services.projitems" Label="Shared" />
 
+    <Import Project="..\..\prototype_storage\prototype_storage\prototype_storage.projitems" Label="Shared" />
+
 </Project>

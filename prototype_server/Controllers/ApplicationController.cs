@@ -2,7 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 
 using prototype_config;
-using prototype_server.DB;
+using prototype_storage;
 
 namespace prototype_server.Controllers
 {

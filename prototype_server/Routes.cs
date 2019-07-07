@@ -7,7 +7,7 @@ using LiteNetLib;
 
 using prototype_config;
 using prototype_server.Controllers;
-using prototype_server.DB;
+using prototype_storage;
 using prototype_services;
 using prototype_services.Common;
 using prototype_services.Interfaces;

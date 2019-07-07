@@ -10,6 +10,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_services", "..\pr
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_config", "..\prototype_config\prototype_config\prototype_config.shproj", "{DF4EA7DB-9414-48A2-B593-639175DCBC7F}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_storage", "..\prototype_storage\prototype_storage\prototype_storage.shproj", "{DB0B6353-88CB-46C0-94FF-E92BF1D6A494}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,5 +34,9 @@ Global
 		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D2AA2724-70CB-430F-A9EE-A628DAE2FB05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E6F16F5F-584E-4A15-83DB-9CC9B9A51E10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6F16F5F-584E-4A15-83DB-9CC9B9A51E10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6F16F5F-584E-4A15-83DB-9CC9B9A51E10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6F16F5F-584E-4A15-83DB-9CC9B9A51E10}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

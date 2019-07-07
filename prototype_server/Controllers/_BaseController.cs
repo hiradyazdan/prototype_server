@@ -3,7 +3,7 @@ using LiteNetLib.Utils;
 using Microsoft.Extensions.Configuration;
 
 using prototype_config;
-using prototype_server.DB;
+using prototype_storage;
 using prototype_services.Interfaces;
 
 namespace prototype_server.Controllers
