@@ -4,7 +4,8 @@ using System.Reflection;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using Moq;
-using prototype_server.Models;
+using prototype_config;
+using prototype_models.OOD;
 using prototype_server.Specs.Controllers.PlayerCtrl;
 
 namespace prototype_server.Specs.Config.Utils.Helpers
@@ -13,7 +14,7 @@ namespace prototype_server.Specs.Config.Utils.Helpers
     {
         // currently Reflection is the only solution to mock LiteNetLib classes
         // as they're mostly internal and sealed
-        internal static NetPacketReader GetReaderMock(Player player, NET_DATA_TYPE netDataType, int rawDataSize)
+        internal static NetPacketReader GetReaderMock(Player player, PacketTypes packetType, int rawDataSize)
         {
             const BindingFlags bindingAttr = BindingFlags.NonPublic | BindingFlags.Instance;
             
@@ -21,8 +22,8 @@ namespace prototype_server.Specs.Config.Utils.Helpers
             var readerMock = netPacketReaderCtor.Invoke(new object[] { null, null }) as NetPacketReader;            
             var readerMockType = readerMock?.GetType();
             var dataWriter = new NetDataWriter();
-
-            dataWriter.Put((int)netDataType);
+            
+            dataWriter.Put((int)packetType);
             dataWriter.Put(player.IsLocal);
             dataWriter.Put(player.X);
             dataWriter.Put(player.Y);
@@ -30,10 +31,10 @@ namespace prototype_server.Specs.Config.Utils.Helpers
             
             readerMockType?.GetField("_data", bindingAttr).SetValue(readerMock,dataWriter.Data);
             readerMockType?.GetField("_dataSize", bindingAttr).SetValue(readerMock, rawDataSize);
-
+            
             return readerMock;
         }
-
+        
         internal static NetPeer GetPeerMock(IPEndPoint ipEndpointMock)
         {
             var iNetEventListenerMock = new Mock<INetEventListener>().Object;

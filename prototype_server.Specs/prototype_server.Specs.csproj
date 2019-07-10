@@ -3,22 +3,30 @@
     <PropertyGroup>
         <TargetFramework>netcoreapp2.2</TargetFramework>
         
-        <IsPackable>false</IsPackable>
+        <OutputType>Exe</OutputType>
+        <RuntimeIdentifiers>win-x86;win10-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="altcover" Version="5.2.667" />
-      <PackageReference Include="dotnet-reportgenerator-cli" Version="4.0.15" />
+<!--      <PackageReference Include="altcover" Version="5.2.667" />-->
+<!--      <PackageReference Include="dotnet-reportgenerator-cli" Version="4.0.15" />-->
+<!--      <PackageReference Include="FluentAssertions" Version="5.6.0" />-->
+<!--      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.3" />-->
+<!--      <PackageReference Include="Moq" Version="4.10.1" />-->
+<!--      <PackageReference Include="NUnit" Version="3.11.0" />-->
+<!--      <PackageReference Include="Serilog" Version="2.8.0" />-->
+<!--      <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.0" />-->
+<!--      <PackageReference Include="Serilog.Sinks.RollingFile" Version="3.3.0" />-->
+<!--      <PackageReference Include="Specify" Version="2.4.0" />-->
+    
+      <PackageReference Include="altcover" Version="5.3.675" />
+    
+      <PackageReference Include="dotnet-test-nspec" Version="0.2.1" />
       <PackageReference Include="FluentAssertions" Version="5.6.0" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.3" />
-      <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.0.1" />
-      <PackageReference Include="Moq" Version="4.10.1" />
+      <PackageReference Include="Moq" Version="4.12.0" />
+      <PackageReference Include="NSpec" Version="3.1.0" />
       <PackageReference Include="NUnit" Version="3.11.0" />
-      <PackageReference Include="NUnit3TestAdapter" Version="3.13.0" />
-      <PackageReference Include="Serilog" Version="2.8.0" />
-      <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.0" />
-      <PackageReference Include="Serilog.Sinks.RollingFile" Version="3.3.0" />
-      <PackageReference Include="Specify" Version="2.4.0" />
+      <PackageReference Include="ReportGenerator" Version="4.1.0" />
     </ItemGroup>
 
     <ItemGroup>
