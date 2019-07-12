@@ -25,7 +25,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
     {
         private PlayerController _subject;
         private RedisCacheAdapter _redisCacheAdapter;
-        private Player _playerMock;
+        private PlayerModel _playerMock;
         private NetPeer _peerMock;
         private Guid _playerGuid;
         
@@ -49,7 +49,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
                                     sizeof(float) * 3;
             
             _peerMock = Helpers.GetPeerMock(ipEndpointMock);
-            _playerMock = new Player(_peerMock)
+            _playerMock = new PlayerModel(_peerMock)
             {
                 GUID = _playerGuid,
                 Name = "user_15000",
@@ -60,11 +60,11 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             
             var readerMock = Helpers.GetReaderMock(_playerMock, NET_DATA_TYPE.PlayerPosition, rawDataSize);
             
-            dbContextMock.Setup(m => m.Set<Player>()).Returns(playerDbSetMock);
+            dbContextMock.Setup(m => m.Set<PlayerModel>()).Returns(playerDbSetMock);
             
-            var playerModelRepoMock = new Mock<ModelRepository<Player>>(MockBehavior.Loose, dbContextMock.Object);
+            var playerModelRepoMock = new Mock<ModelRepository<PlayerModel>>(MockBehavior.Loose, dbContextMock.Object);
             
-            scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
+            scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<PlayerModel>)))
                      .Returns(playerModelRepoMock.Object);
             
             _redisCacheAdapter = new RedisCacheAdapter("localhost");

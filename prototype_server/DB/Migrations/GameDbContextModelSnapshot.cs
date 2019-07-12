@@ -16,7 +16,7 @@ namespace prototype_server.DB.Migrations
             modelBuilder
                 .HasAnnotation("ProductVersion", "2.2.2-servicing-10034");
 
-            modelBuilder.Entity("prototype_server.Models.Player", b =>
+            modelBuilder.Entity("prototype_models.OOD.PlayerModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();

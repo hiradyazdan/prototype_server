@@ -13,23 +13,24 @@ using prototype_serializers;
 using prototype_serializers.Packets;
 using prototype_storage;
 using prototype_models.OOD;
+using prototype_models.OOD.Interfaces;
 
 namespace prototype_server.Controllers
-{   
+{
     public class PlayerController : ApplicationController
     {
-        private readonly IRepository<Player> _playerModel;
-        private readonly Dictionary<Guid, Player> _playersDictionary;
+        private readonly IRepository<PlayerModel> _playerModel;
+        private readonly Dictionary<Guid, PlayerModel> _playersDictionary;
         private readonly SerializerConfiguration _serializerConfiguration;
         
         private PacketTypes _packetType;
         private bool _playerIdle;
         private int _syncCount;
-
+        
         public PlayerController(IServiceScope scope, IRedisCache redis) : base(scope, redis)
         {
-            _playerModel = scope.ServiceProvider.GetService<IRepository<Player>>();
-            _playersDictionary = new Dictionary<Guid, Player>();
+            _playerModel = scope.ServiceProvider.GetService<IRepository<PlayerModel>>();
+            _playersDictionary = new Dictionary<Guid, PlayerModel>();
             
             _serializerConfiguration = SerializerConfiguration.Initialize(IsSerialized, IsClientDebug);
             
@@ -40,21 +41,35 @@ namespace prototype_server.Controllers
         {
             LogService.Log("[" + peer.Id + "] OnPeerConnected: " + peer.EndPoint.Address + ":" + peer.EndPoint.Port);
             
+            FindOrCreateBy(peer);
+            
+            // Sync with local client
+            SyncWithConnectedPeer(peer, ActionTypes.Spawn);
+        }
+
+        private Guid GetPlayerId(NetPeer peer)
+        {
             var addressBytes = peer.EndPoint.Address.GetAddressBytes();
             var portBytes = BitConverter.GetBytes(peer.EndPoint.Port);
-            var playerGuid = IsClientDebug 
+            
+            return IsClientDebug 
                 ? addressBytes.Concat(portBytes).ToArray().ConvertToGuid()
                 
                 // GUID is exactly 16 bytes or and 36 character in length
                 // IP address max size is 16 bytes,
                 // therefore the generated guid size won't ever be more than 16 bytes
                 : addressBytes.ConvertToGuid();
+        }
+        
+        private void FindOrCreateBy(NetPeer peer)
+        {
+            var playerGuid = GetPlayerId(peer);
             
-            Player newPlayer = null;
+            PlayerModel newPlayer = null;
             
             if (!_playersDictionary.ContainsKey(playerGuid))
             {
-                newPlayer = new Player(peer)
+                newPlayer = new PlayerModel(peer)
                 {
                     GUID = playerGuid,
                     Name = "user_" + new Random().Next(10000, 100000)
@@ -70,19 +85,15 @@ namespace prototype_server.Controllers
             
             if (cache != null)
             {
-#if DEBUG
                 LogService.Log("Hit Cache");
-#endif
+                
                 var strArr = cache.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                var coords = Array.ConvertAll(strArr, float.Parse);
+                var coords = strArr.ConvertAllToFloat();
                 
                 _playersDictionary[playerGuid].X = coords[0];
                 _playersDictionary[playerGuid].Y = coords[1];
                 _playersDictionary[playerGuid].Z = coords[2];
             }
-            
-            // Sync with local client
-            SyncWithConnectedPeer(peer, ActionTypes.Spawn);
             
             if (cache != null || newPlayer == null) return;
             
@@ -98,15 +109,7 @@ namespace prototype_server.Controllers
                 " - Reason: " + disconnectInfo.Reason
             );
             
-            var addressBytes = peer.EndPoint.Address.GetAddressBytes();
-            var portBytes = BitConverter.GetBytes(peer.EndPoint.Port);
-            var playerGuid = IsClientDebug 
-                ? addressBytes.Concat(portBytes).ToArray().ConvertToGuid()
-                
-                // GUID is exactly 16 bytes or and 36 character in length
-                // IP address max size is 16 bytes,
-                // therefore the generated guid size won't ever be more than 16 bytes
-                : addressBytes.ConvertToGuid();
+            var playerGuid = GetPlayerId(peer);
             
             // Why checking this?!
             if (!_playersDictionary.ContainsKey(playerGuid)) return;
@@ -177,20 +180,11 @@ namespace prototype_server.Controllers
             var y = positionState.Y;
             var z = positionState.Z;
             
-            var peerEndpoint = peer.EndPoint;
-            var addressBytes = peerEndpoint.Address.GetAddressBytes();
-            var portBytes = BitConverter.GetBytes(peer.EndPoint.Port);
-            var playerGuid = IsClientDebug 
-                ? addressBytes.Concat(portBytes).ToArray().ConvertToGuid()
-                
-                // GUID is exactly 16 bytes or and 36 character in length
-                // IP address max size is 16 bytes,
-                // therefore the generated guid size won't ever be more than 16 bytes
-                : addressBytes.ConvertToGuid();
+            var playerGuid = GetPlayerId(peer);
             
             LogService.Log(
                 (IsClientDebug 
-                    ? $"{packetType} [{peerEndpoint.Address}:{peerEndpoint.Port}]: " 
+                    ? $"{packetType} [{peer.EndPoint.Address}:{peer.EndPoint.Port}]: " 
                     : $"{packetType} [{playerGuid}]: ") + 
                 $"(x: {x}, y: {y}, z: {z})"
             );
@@ -349,7 +343,7 @@ namespace prototype_server.Controllers
             }
         }
         
-        private void WritePositions(Player player, long playerId, int playerCount, bool onPeerConnected)
+        private void WritePositions(PlayerModel player, long playerId, int playerCount, bool onPeerConnected)
         {
             var isReadyToSerialize = playerCount == _playersDictionary.Count || !onPeerConnected;
             var position = new Vector3(player.X, player.Y, player.Z);

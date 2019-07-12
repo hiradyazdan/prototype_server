@@ -13,7 +13,7 @@ namespace prototype_server.Specs.Config.Utils.Helpers
     {
         // currently Reflection is the only solution to mock LiteNetLib classes
         // as they're mostly internal and sealed
-        internal static NetPacketReader GetReaderMock(Player player, NET_DATA_TYPE netDataType, int rawDataSize)
+        internal static NetPacketReader GetReaderMock(PlayerModel player, NET_DATA_TYPE netDataType, int rawDataSize)
         {
             const BindingFlags bindingAttr = BindingFlags.NonPublic | BindingFlags.Instance;
             

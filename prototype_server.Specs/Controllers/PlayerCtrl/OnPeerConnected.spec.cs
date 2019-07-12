@@ -32,7 +32,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         }
 
         private PlayerController _subject;
-        private ModelRepository<Player> _playerModelRepo;
+        private ModelRepository<PlayerModel> _playerModelRepo;
         private NetPeer _peerMock;
         private long _peerId;
 
@@ -51,9 +51,9 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             
             _peerMock = Helpers.GetPeerMock(ipEndpointMock);
             _peerId = peerEndpoint;
-            _playerModelRepo = new ModelRepository<Player>(dbContext);
+            _playerModelRepo = new ModelRepository<PlayerModel>(dbContext);
             
-            scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
+            scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<PlayerModel>)))
                      .Returns(_playerModelRepo);
 
             _subject = new PlayerController(scopeMock.Object, redisCacheMock);
@@ -95,7 +95,7 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
         }
 
         private PlayerController _subject;
-        private ModelRepository<Player> _playerModelRepo;
+        private ModelRepository<PlayerModel> _playerModelRepo;
         private NetPeer _peerMock;
         private long _peerId;
         
@@ -118,19 +118,19 @@ namespace prototype_server.Specs.Controllers.PlayerCtrl
             var playerGuid = Helpers.ConvertBytesToGuid(peerEndpointBytes);
             
             var playerDbSetMock = Helpers.GetQueryableMockDbSet(
-                    new Player(_peerMock)
+                    new PlayerModel(_peerMock)
                     {
                         GUID = playerGuid,
                         Name = "user_15000"
                     }
                 );
 
-            dbContext.Setup(m => m.Set<Player>()).Returns(playerDbSetMock);
+            dbContext.Setup(m => m.Set<PlayerModel>()).Returns(playerDbSetMock);
 
             _peerId = peerEndpoint;
-            _playerModelRepo = new ModelRepository<Player>(dbContext.Object);
+            _playerModelRepo = new ModelRepository<PlayerModel>(dbContext.Object);
             
-            scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<Player>)))
+            scopeMock.Setup(m => m.ServiceProvider.GetService(typeof(IRepository<PlayerModel>)))
                      .Returns(_playerModelRepo);
             
             redisCacheMock.Setup(m => m.GetCache(playerGuid.ToString()))
