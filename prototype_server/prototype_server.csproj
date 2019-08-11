@@ -5,12 +5,26 @@
         <TargetFramework>netcoreapp2.2</TargetFramework>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
-
+    
+    <!--
+    TODO: Temporary Config fix until dotenv replaces iconfig  
+    -->
     <ItemGroup>
+        <None Update="appsettings.Development.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="Dapper" Version="1.60.6" />
       <PackageReference Include="LiteNetLib" Version="0.8.3" />
       <PackageReference Include="MessagePack" Version="1.7.3.7" />
 <!--      <PackageReference Include="MessagePack.UnityShims" Version="1.7.3.7" />-->
-      <PackageReference Include="MessagePackAnalyzer" Version="1.6.0" />
+      <PackageReference Include="MessagePackAnalyzer" Version="1.7.3.7" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.2" />
       <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="2.2.0" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.4" />
@@ -21,6 +35,11 @@
       <PackageReference Include="MySql.Data.EntityFrameworkCore" Version="8.0.15" />
       <PackageReference Include="StackExchange.Redis" Version="2.0.601" />
       <PackageReference Include="System.CodeDom" Version="4.5.0" />
+      <PackageReference Include="Utf8Json" Version="1.3.7" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\..\opensource\Http.Extensions\Http.Extensions\Http.Extensions.csproj" />
     </ItemGroup>
 
     <Import Project="..\..\prototype_config\prototype_config\prototype_config.projitems" Label="Shared" />

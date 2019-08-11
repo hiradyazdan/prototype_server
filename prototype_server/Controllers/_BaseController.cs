@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using LiteNetLib.Utils;
 using Microsoft.Extensions.Configuration;
+
+using MessagePack.Resolvers;
 
 using prototype_config;
 using prototype_storage;
@@ -17,6 +18,7 @@ namespace prototype_server.Controllers
     {
         protected readonly ILogService LogService;
         protected readonly INetworkService NetworkService;
+        protected readonly IHttpService HttpService;
         protected readonly IConfiguration Config;
         protected readonly IRedisCache Redis;
         protected readonly IServiceScope Scope;
@@ -30,10 +32,16 @@ namespace prototype_server.Controllers
             
             LogService = services.Log;
             NetworkService = services.Network;
+            HttpService = services.Http;
             
             LogService.LogScope = this;
             
             Redis = redis;
+            
+            SerializerConfiguration.RegisterMessagePackResolvers(
+                false,
+                CustomTypeResolver.Instance
+            );
         }
     }
 }

@@ -37,7 +37,7 @@ namespace prototype_server
         
         private void Run(NetManager server, RoutesBase routes)
         {
-            if (server.Start(15000))
+            if (server.Start("127.0.0.1", "::1", 15000))
             {
                 _logService.Log("Server started listening on port 15000");
             }
@@ -51,7 +51,7 @@ namespace prototype_server
             {
                 server.PollEvents();
                 routes.SyncWithConnectedPeers();
-
+                
                 Thread.Sleep(15);
             }
         }
