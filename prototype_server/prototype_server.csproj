@@ -1,9 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp2.2</TargetFramework>
         <LangVersion>latest</LangVersion>
+
+        <!-- 
+        NOTE: 
+        Temporarily suppressed warnings (NU1701) from Entitas related nuget packages as
+        they're currently working without any issues. 
+        -->
+        <NoWarn>NU1701</NoWarn>
     </PropertyGroup>
     
     <!--
@@ -21,6 +28,9 @@
     
     <ItemGroup>
       <PackageReference Include="Dapper" Version="1.60.6" />
+      <PackageReference Include="DesperateDevs.Utils" Version="0.0.0" />
+      <PackageReference Include="Entitas" Version="1.13.0" />
+      <PackageReference Include="Entitas.CodeGeneration.Attributes" Version="1.13.0" />
       <PackageReference Include="LiteNetLib" Version="0.8.3" />
       <PackageReference Include="MessagePack" Version="1.7.3.7" />
 <!--      <PackageReference Include="MessagePack.UnityShims" Version="1.7.3.7" />-->
@@ -37,19 +47,29 @@
       <PackageReference Include="System.CodeDom" Version="4.5.0" />
       <PackageReference Include="Utf8Json" Version="1.3.7" />
     </ItemGroup>
+
+<!--    <ItemGroup>-->
+<!--        <Reference Include="DesperateDevs.Utils, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">-->
+<!--            <HintPath>..\..\prototype_libraries\prototype_libraries\DesperateDevs\DesperateDevs.Utils.dll</HintPath>-->
+<!--        </Reference>-->
+<!--        <Reference Include="Entitas, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">-->
+<!--            <HintPath>..\..\prototype_libraries\prototype_libraries\Entitas\Entitas.dll</HintPath>-->
+<!--        </Reference>-->
+<!--        <Reference Include="Entitas.CodeGeneration.Attributes, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">-->
+<!--            <HintPath>..\..\prototype_libraries\prototype_libraries\Entitas\Entitas.CodeGeneration.Attributes.dll</HintPath>-->
+<!--        </Reference>-->
+<!--    </ItemGroup>-->
     
     <ItemGroup>
       <ProjectReference Include="..\..\..\..\..\opensource\Http.Extensions\Http.Extensions\Http.Extensions.csproj" />
     </ItemGroup>
 
     <Import Project="..\..\prototype_config\prototype_config\prototype_config.projitems" Label="Shared" />
-    
     <Import Project="..\..\prototype_serializers\prototype_serializers\prototype_serializers.projitems" Label="Shared" />
-
     <Import Project="..\..\prototype_services\prototype_services\prototype_services.projitems" Label="Shared" />
-
     <Import Project="..\..\prototype_storage\prototype_storage\prototype_storage.projitems" Label="Shared" />
-
     <Import Project="..\..\prototype_models\prototype_models\prototype_models.projitems" Label="Shared" />
+    <Import Project="..\..\prototype_ecs\prototype_ecs.Common\prototype_ecs.Common.projitems" Label="Shared" />
+    <Import Project="..\..\prototype_ecs\prototype_ecs.NetCoreApp\prototype_ecs.NetCoreApp.projitems" Label="Shared" />
 
 </Project>

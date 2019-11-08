@@ -2,14 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-using Microsoft.Extensions.DependencyInjection;
-
 using LiteNetLib;
 using LiteNetLib.Utils;
 
 using prototype_config;
 using prototype_serializers;
-using prototype_storage;
 using prototype_models.OOD;
 using prototype_models;
 using prototype_serializers.JSON;
@@ -29,7 +26,7 @@ namespace prototype_server.Controllers
         private long _playerId;
         private string _playerSocialId;
         
-        public PlayerController(IServiceScope scope, IRedisCache redis) : base(scope, redis)
+        public PlayerController()
         {
             _playersDictionary = new Dictionary<long, PlayerModel>();
             
@@ -45,7 +42,7 @@ namespace prototype_server.Controllers
             const bool isHttpSecure = true;
 #endif
             
-            HttpService.SetupClient(httpHostAddress, httpHostPort, isHttpSecure);
+            CrudService.SetupClient(httpHostAddress, httpHostPort, isHttpSecure);
             
             _httpHeaders = new Dictionary<HttpHeaderFields, string>
             {
@@ -69,24 +66,32 @@ namespace prototype_server.Controllers
                 " - Reason: " + disconnectInfo.Reason
             );
             
-            _playerId = _playersDictionary.SingleOrDefaultBy(p =>
+            try
             {
-                var (_, value) = p;
-                
-                /**
-                 * TODO:
-                 * Not sure checking with ip and port to retrieve the profile id is the
-                 * best and robust solution here as there might be some edge cases that break the functionality!
-                 */
-                return $"{value.Peer.EndPoint.Address}" == $"{peer.EndPoint.Address}" &&
-                       value.Peer.EndPoint.Port == peer.EndPoint.Port;
-            }).Value.Id;
+                _playerId = _playersDictionary.SingleOrDefaultBy(p =>
+                {
+                    var (_, value) = p;
+                    
+                    /*
+                     * TODO:
+                     * Not sure checking with ip and port to retrieve the profile id is the
+                     * best and robust solution here as there might be some edge cases that break the functionality!
+                     */
+                    return value.Peer.EndPoint.Address.ToString() == peer.EndPoint.Address.ToString() && 
+                           value.Peer.EndPoint.Port == peer.EndPoint.Port;
+                }).Value.Id;
+            }
+            catch (NullReferenceException exc)
+            {
+                LogService.LogError(exc);
+                _playerId = 0;
+            }
             
             var player = _playersDictionary.ContainsKey(_playerId) ? _playersDictionary[_playerId] : null;
             
-            var cache = player != null ? Redis.GetCache($"{player.Id}") : null;
+            // var cache = player != null ? Redis.GetCache($"{player.Id}") : null;
             
-            /**
+            /*
              * TODO:
              * utf8json doesn't parse numbers from string,
              * should create a custom formatter
@@ -97,14 +102,14 @@ namespace prototype_server.Controllers
             /*
              * If the player makes no changes on the client before disconnect
              */
-            if (
-                cache == null 
-                || player.Spawned 
+            // if (
+                // cache == null 
+                // || player.Spawned 
 //              || gameStates.All(gameState => gameState.Position.ToVector3() == player.ToVector3())
-                )
-            {
-                return;
-            }
+            //     )
+            // {
+            //     return;
+            // }
             
 //            var actors = new PlayerModel[] { };
 //            
@@ -157,7 +162,7 @@ namespace prototype_server.Controllers
                 { "id", $"{_playerId}" }
             };
             
-            var patchRes = HttpService.RequestStringAsync(
+            var patchRes = CrudService.RequestStringAsync(
                 $"{ContentApiEndpoints.PROFILES}/:id",
                 profileGameStatesJson,
                 urlParams,
@@ -165,7 +170,7 @@ namespace prototype_server.Controllers
                 _httpHeaders
             ).Result;
             
-            HttpService.AuthToken = null;
+            CrudService.AuthToken = null;
             
             _playersDictionary.Remove(_playerId);
         }
@@ -180,9 +185,9 @@ namespace prototype_server.Controllers
             
             const int deliveryMethodHeaderSize = 3;
             
-            var reader = NetworkService.GetPacketReader(packetReader);
+            var reader = RelayService.GetPacketReader(packetReader);
             
-            var packetType = NetworkService.GetPacketType(reader); // 4 bytes
+            var packetType = RelayService.GetPacketType(reader); // 4 bytes
             
             var expectedPacketSize = _serializerConfig.GetExpectedStateSize(packetType) + // 30 bytes
                                      sizeof(PacketTypes) + // 4 bytes
@@ -223,7 +228,7 @@ namespace prototype_server.Controllers
             var stateBytes = reader.GetRemainingBytes();
             var statesCount = stateBytes.Length / _serializerConfig.GetExpectedStateSize(packetType);
             
-            var gameState = NetworkService.ReadStates<GameStateSerializer, UdpPreloadGameStateModel>(stateBytes, statesCount)[0];
+            var gameState = RelayService.ReadStates<GameStateSerializer, UdpPreloadGameStateModel>(stateBytes, statesCount)[0];
             
             _playerId = gameState.Id;
             _playerSocialId = gameState.SocialId;
@@ -261,7 +266,7 @@ namespace prototype_server.Controllers
             
             if (isSpawned)
             {
-                /**
+                /*
                  * On network receive is called once the player is spawned and sends packet to relay server
                  * Currently this is the best solution to spawn non-local players
                  * 
@@ -273,7 +278,7 @@ namespace prototype_server.Controllers
                 }
             }
             
-            /**
+            /*
              * Packet Data
              */
             
@@ -299,7 +304,7 @@ namespace prototype_server.Controllers
             var stateBytes = reader.GetRemainingBytes();
             var statesCount = stateBytes.Length / _serializerConfig.GetExpectedStateSize(packetType);
             
-            var positionState = NetworkService.ReadStates<PositionSerializer, UdpPositionModel>(stateBytes, statesCount)[0];
+            var positionState = RelayService.ReadStates<PositionSerializer, UdpPositionModel>(stateBytes, statesCount)[0];
             
             _playerId = positionState.Id;
             
@@ -325,7 +330,7 @@ namespace prototype_server.Controllers
             
             if (isMoved)
             {
-                /**
+                /*
                  * This will avoid calling SetGameStates for non-local player moves
                  * 
                  * TODO: modifying relay server to ECS Architecture can alleviate issues like this
@@ -336,7 +341,7 @@ namespace prototype_server.Controllers
                 }
             }
             
-            /**
+            /*
              * Packet Data
              */
             
@@ -380,11 +385,11 @@ namespace prototype_server.Controllers
         {
             var deliveryMethod = onPeerConnected ? DeliveryMethod.ReliableOrdered : DeliveryMethod.Sequenced; // 3 bytes
             var headerSize = deliveryMethod.GetSize() - 1; // header size is 3 bytes
-            var dataWriter = NetworkService.DataWriter;
+            var dataWriter = RelayService.DataWriter;
             
             _playerIdle = true;
             
-            NetworkService.ResetDataWriter();
+            RelayService.ResetDataWriter();
             
             switch (actionType)
             {
@@ -400,7 +405,7 @@ namespace prototype_server.Controllers
                     throw new ArgumentOutOfRangeException(nameof(actionType), actionType, null);
             }
             
-            NetworkService.WriteStates((int) _packetType); // 4 bytes
+            RelayService.WriteStates((int) _packetType); // 4 bytes
             
             switch (_packetType)
             {
@@ -470,7 +475,7 @@ namespace prototype_server.Controllers
                 Z = player.Z
             };
             
-            NetworkService.WriteStates<GameStateSerializer, UdpNonLocalPreloadGameStateModel>(
+            RelayService.WriteStates<GameStateSerializer, UdpNonLocalPreloadGameStateModel>(
                 isReadyToSerialize,
                 
                 player.ActionType, // 4 bytes
@@ -520,7 +525,7 @@ namespace prototype_server.Controllers
             var isReadyToSerialize = playerCount == _playersDictionary.Count || !onPeerConnected;
             var position = new Vector3(player.X, player.Y, player.Z);
             
-            NetworkService.WriteStates<PositionSerializer, UdpPositionModel>(
+            RelayService.WriteStates<PositionSerializer, UdpPositionModel>(
                 isReadyToSerialize,
                 
                 player.ActionType, // 4 bytes
@@ -549,7 +554,7 @@ namespace prototype_server.Controllers
         
         private void AuthenticateProfile()
         {
-            /**
+            /*
              * TODO:
              * Figure out a way to generate a more secure password
              *
@@ -567,12 +572,12 @@ namespace prototype_server.Controllers
                 Password = password
             };
             
-            var authRes = HttpService.RequestStringAsync(
+            var authRes = CrudService.RequestStringAsync(
                 ContentApiEndpoints.AUTH,
                 JsonSerializer.ToJson(profile, new [] { "action_type", "object_type", "id", "is_local" })
             ).Result;
             
-            HttpService.AuthToken = JsonSerializer.FromJson<ProfileModel>(authRes)?.AuthToken;
+            CrudService.AuthToken = JsonSerializer.FromJson<ProfileModel>(authRes)?.AuthToken;
         }
     }
 }

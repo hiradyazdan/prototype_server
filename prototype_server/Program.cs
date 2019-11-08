@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading;
 
-using LiteNetLib;
-
 using prototype_config;
 using prototype_services.Interfaces;
 
@@ -11,6 +9,10 @@ namespace prototype_server
     public class Program
     {
         private readonly ILogService _logService;
+        private readonly IRelayService _relayService;
+        private readonly IStorageService _storageService;
+        
+        private readonly Routes _routes;
         
         public static void Main(string[] args)
         {
@@ -19,12 +21,8 @@ namespace prototype_server
             
             var program = new Program(serviceConfig);
             
-            var routes = new Routes(serviceConfig);
-            var server = new NetManager(routes);
-            
-            routes.ServerInstance = server;
-            
-            program.Run(server, routes);
+            program.Start();
+            program.FixedUpdate();
             
             Console.ReadKey();
         }
@@ -32,25 +30,26 @@ namespace prototype_server
         private Program(ServiceConfiguration serviceConfig)
         {
             _logService = serviceConfig.SharedServices.Log;
+            _relayService = serviceConfig.SharedServices.Relay;
+            _storageService = serviceConfig.SharedServices.Storage;
+            
+            _storageService.ConfigureStorage();
+            
+            _routes = new Routes(serviceConfig);
+            
             _logService.LogScope = this;
         }
         
-        private void Run(NetManager server, RoutesBase routes)
+        private void Start()
         {
-            if (server.Start("127.0.0.1", "::1", 15000))
+            _routes.Start();
+        }
+        
+        private void FixedUpdate()
+        {
+            while (_relayService.NetManager.IsRunning)
             {
-                _logService.Log("Server started listening on port 15000");
-            }
-            else
-            {
-                _logService.LogError("Server could not start!");
-                return;
-            }
-
-            while (server.IsRunning)
-            {
-                server.PollEvents();
-                routes.SyncWithConnectedPeers();
+                _routes.FixedUpdate();
                 
                 Thread.Sleep(15);
             }

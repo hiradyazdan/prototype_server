@@ -1,82 +1,83 @@
 using System.Net;
 using System.Net.Sockets;
-
-using Microsoft.Extensions.DependencyInjection;
-using LiteNetLib;
+using System.Threading;
 
 using prototype_config;
-using prototype_server.Controllers;
-using prototype_storage;
+using prototype_services.Common.Network;
 using prototype_services.Interfaces;
 
 namespace prototype_server
 {
-    public class Routes : RoutesBase
+    using Controllers;
+    
+    public class Routes : _BaseRoutes, INetEventListenerAdapter
     {
-        public NetManager ServerInstance { private get; set; }
-
-        private readonly ILogService _logService;
+        private readonly RelayController _relayCtrl;
+        private readonly GameController _gameCtrl;
         
-        private readonly PlayerController _playerCtrl;
-        
-        public Routes(ServiceConfiguration serviceConfig)
+        public Routes(ServiceConfiguration serviceConfig) : base(serviceConfig)
         {
-            var scope = serviceConfig.ServiceProvider.CreateScope();
-            var redisCache = serviceConfig.ServiceProvider.GetRequiredService<RedisCache>();
+            _relayCtrl = new RelayController();
+            _gameCtrl = new GameController();
+        }
+        
+        public void Start()
+        {
+            var ipv4 = "192.168.0.13";
+            var ipv6 = "::1";
+            var port = 15000;
             
-            _logService = serviceConfig.SharedServices.Log;
-            _logService.LogScope = this;
-            
-            _playerCtrl = new PlayerController(scope, redisCache);
-        }
-
-        public override void OnPeerConnected(NetPeer peer)
-        {
-            _playerCtrl.OnPeerConnected(peer);
-        }
-
-        public override void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo)
-        {
-            _playerCtrl.OnPeerDisconnected(peer, disconnectInfo);
-        }
-
-        public override void OnNetworkError(IPEndPoint endPoint, SocketError socketError)
-        {
-            _logService.Log(endPoint.Address + ":" + endPoint.Port + " OnNetworkError: " + socketError);
-        }
-
-        public override void OnNetworkReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
-        {
-            _playerCtrl.OnNetworkReceive(peer, reader, deliveryMethod);
-        }
-
-        public override void OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetPacketReader reader, UnconnectedMessageType messageType)
-        {
-            _logService.Log("OnNetworkReceiveUnconnected");
-        }
-
-        public override void OnNetworkLatencyUpdate(NetPeer peer, int latency)
-        {
-//            _logService.Log("OnNetworkLatencyUpdate");
-        }
-        
-        public override void OnConnectionRequest(ConnectionRequest request)
-        {
-            const int maxConn = 10;
-
-            if (ServerInstance.PeersCount < maxConn)
+            if (RelayService.NetManager.Start(ipv4, ipv6, port))
             {
-                request.AcceptIfKey("SomeConnectionKey");
+                LogService.Log($"Server started listening on port {port}");
+                _gameCtrl.Start();
             }
             else
             {
-                request.Reject();
+                LogService.LogError("Server could not start!");
             }
         }
-
-        public override void SyncWithConnectedPeers()
+        
+        public void FixedUpdate()
         {
-            _playerCtrl.SyncWithConnectedPeers();
+            RelayService.PollEvents(this);
+            
+            _gameCtrl.FixedUpdate();
+        }
+        
+        public void OnPeerConnected(object peer)
+        {
+            _relayCtrl.OnPeerConnected(peer);
+        }
+        
+        public void OnPeerDisconnected(object peer, object disconnectInfo)
+        {
+            _relayCtrl.OnPeerDisconnected(peer, disconnectInfo);
+        }
+        
+        public void OnNetworkError(IPEndPoint endPoint, SocketError socketError)
+        {
+            _relayCtrl.OnNetworkError(endPoint, socketError);
+        }
+        
+        public void OnNetworkReceive(object peer, object reader, DeliveryMethods deliveryMethod)
+        {
+            _relayCtrl.OnNetworkReceive(peer, reader, deliveryMethod);
+        }
+        
+        public void OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, object reader, UnconnectedMessageTypes messageType)
+        {
+            _relayCtrl.OnNetworkReceiveUnconnected(remoteEndPoint, reader, messageType);
+        }
+        
+        public void OnNetworkLatencyUpdate(object peer, int latency)
+        {
+            _relayCtrl.OnNetworkLatencyUpdate(peer, latency);
+        }
+        
+        public void OnConnectionRequest(object request)
+        {
+            _relayCtrl.OnConnectionRequest(request);
         }
     }
 }

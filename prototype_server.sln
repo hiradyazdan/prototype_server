@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server", "prototype_server\prototype_server.csproj", "{71A9BE76-A2C8-4977-9D92-9458EC0518FE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.ECS", "prototype_server.ECS\prototype_server.ECS.csproj", "{F5964BBD-DBB1-4176-8401-935EA701885F}"
-EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_config", "..\prototype_config\prototype_config\prototype_config.shproj", "{DF4EA7DB-9414-48A2-B593-639175DCBC7F}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_storage", "..\prototype_storage\prototype_storage\prototype_storage.shproj", "{DB0B6353-88CB-46C0-94FF-E92BF1D6A494}"
@@ -14,9 +12,13 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_serializers", "..
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_services", "..\prototype_services\prototype_services\prototype_services.shproj", "{17C948C2-A9E2-4F2A-B891-58A8737B4F6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Specs", "prototype_server.Specs\prototype_server.Specs.csproj", "{9C535683-51AC-408A-AF0E-5406F4C81277}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_ecs.Common", "..\prototype_ecs\prototype_ecs.Common\prototype_ecs.Common.shproj", "{8BADB61E-2436-4D9C-8466-217B9BFABDEF}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "prototype_ecs.NetCoreApp", "..\prototype_ecs\prototype_ecs.NetCoreApp\prototype_ecs.NetCoreApp.shproj", "{83AFEFDA-EC4D-436C-BDEA-B56E69C75AF5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Http.Extensions", "..\..\..\..\opensource\Http.Extensions\Http.Extensions\Http.Extensions.csproj", "{AE2662E9-5F09-4CCB-949C-23D1631DF1CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "prototype_server.Specs", "prototype_server.Specs\prototype_server.Specs.csproj", "{9C535683-51AC-408A-AF0E-5406F4C81277}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -52,5 +54,17 @@ Global
 		{AE2662E9-5F09-4CCB-949C-23D1631DF1CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AE2662E9-5F09-4CCB-949C-23D1631DF1CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE2662E9-5F09-4CCB-949C-23D1631DF1CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0C164C7-94AD-4537-B9CB-368D729052AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0C164C7-94AD-4537-B9CB-368D729052AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0C164C7-94AD-4537-B9CB-368D729052AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0C164C7-94AD-4537-B9CB-368D729052AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8DDFE08-3E60-47E7-BF29-C648FEFBE982}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8DDFE08-3E60-47E7-BF29-C648FEFBE982}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8DDFE08-3E60-47E7-BF29-C648FEFBE982}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8DDFE08-3E60-47E7-BF29-C648FEFBE982}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83AFEFDA-EC4D-436C-BDEA-B56E69C75AF5}.Debug|Any CPU.ActiveCfg = Unity|Any CPU
+		{83AFEFDA-EC4D-436C-BDEA-B56E69C75AF5}.Debug|Any CPU.Build.0 = Unity|Any CPU
+		{83AFEFDA-EC4D-436C-BDEA-B56E69C75AF5}.Release|Any CPU.ActiveCfg = Unity|Any CPU
+		{83AFEFDA-EC4D-436C-BDEA-B56E69C75AF5}.Release|Any CPU.Build.0 = Unity|Any CPU
 	EndGlobalSection
 EndGlobal
