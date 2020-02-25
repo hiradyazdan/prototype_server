@@ -24,15 +24,9 @@ namespace prototype_server.Controllers
             _actionContext = Contexts.action;
             _serializerConfig = SerializerConfiguration.Initialize(IsSerialized);
             
-#if DEBUG
-            const string httpHostAddress = "192.168.0.22";
-            const int httpHostPort = 3000;
-            const bool isHttpSecure = false;
-#else
-            const string httpHostAddress = "127.0.0.1";
-            const int httpHostPort = 3000;
-            const bool isHttpSecure = true;
-#endif
+            var httpHostAddress = Config["HTTP_HOST"];
+            var httpHostPort = int.Parse(Config["HTTP_PORT"]);
+            var isHttpSecure = Config.IsConfigActive("HTTP_SECURE");
             
             CrudService.SetupClient(httpHostAddress, httpHostPort, isHttpSecure);
             
@@ -127,15 +121,35 @@ namespace prototype_server.Controllers
         
         public void OnConnectionRequest(object connRequest)
         {
+            /*
+             * TODO:
+             * Should decide on how to calculate the maximum limit of concurrent connections
+             * per relay server instance dynamically depending on the location and network latencies
+             * which then should be passed over here to limit the connections at server's core infra.
+             */
             const int maxConn = 10;
             var request = RelayService.GetConnectionRequest(connRequest);
             
-            if (RelayService.NetManager.PeersCount < maxConn)
+            if (RelayService.NetManager.PeersCount <= maxConn)
             {
-                request.AcceptIfKey("SomeConnectionKey");
+                /*
+                 * TODO:
+                 * Should send UDP Connection keys from HTTP Server to:
+                 * (which are generated per each group of peers per relay server instance
+                 * that are limited to the maximum number specified)
+                 * - Relay Server (HTTP Request on application start)
+                 * - Clients (HTTP Request on Preload Session) 
+                 */
+                if (request.AcceptIfKey(Config["UDP_CONN_KEY"]) != null) return;
+                
+                LogService.LogError(
+                    $"UDP Connection Key Mismatch on client: " +
+                    $"{request.RemoteEndPoint.Address}:{request.RemoteEndPoint.Port}"
+                );
             }
             else
             {
+                LogService.LogError($"UDP connections exceed maximum limit of {maxConn}!");
                 request.Reject();
             }
         }
