@@ -14,14 +14,19 @@
     </PropertyGroup>
     
     <!--
-    TODO: Temporary Config fix until dotenv replaces iconfig  
+    NOTE:  
+    This section allows for copying over the env config files to the build
     -->
     <ItemGroup>
-        <None Update="appsettings.Development.json">
+        <None Condition=" $(Configuration) == Debug " Include="..\..\prototype_config\prototype_config\common.env">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
         
-        <None Update="appsettings.json">
+        <None Condition=" $(Configuration) == Debug " Include="..\..\prototype_config\prototype_config\server.env">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        
+        <None Include="..\..\prototype_config\prototype_config\appsettings.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
@@ -29,6 +34,7 @@
     <ItemGroup>
       <PackageReference Include="Dapper" Version="1.60.6" />
       <PackageReference Include="DesperateDevs.Utils" Version="0.0.0" />
+      <PackageReference Include="DotNetEnv" Version="1.4.0" />
       <PackageReference Include="Entitas" Version="1.13.0" />
       <PackageReference Include="Entitas.CodeGeneration.Attributes" Version="1.13.0" />
       <PackageReference Include="LiteNetLib" Version="0.8.3" />

@@ -8,7 +8,7 @@ namespace prototype_server.Controllers
         
         protected ApplicationController()
         {
-            IsSerialized = Config.IsConfigActive("serializePackets");
+            IsSerialized = Config.IsConfigActive("SERIALIZE_PACKETS");
             
             LogService.Log("Serialize Packets: " + IsSerialized);
         }

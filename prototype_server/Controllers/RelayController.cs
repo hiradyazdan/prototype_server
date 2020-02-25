@@ -24,15 +24,9 @@ namespace prototype_server.Controllers
             _actionContext = Contexts.action;
             _serializerConfig = SerializerConfiguration.Initialize(IsSerialized);
             
-#if DEBUG
-            const string httpHostAddress = "192.168.0.22";
-            const int httpHostPort = 3000;
-            const bool isHttpSecure = false;
-#else
-            const string httpHostAddress = "127.0.0.1";
-            const int httpHostPort = 3000;
-            const bool isHttpSecure = true;
-#endif
+            var httpHostAddress = Config["HTTP_HOST"];
+            var httpHostPort = int.Parse(Config["HTTP_PORT"]);
+            var isHttpSecure = Config.IsConfigActive("HTTP_SECURE");
             
             CrudService.SetupClient(httpHostAddress, httpHostPort, isHttpSecure);
             
