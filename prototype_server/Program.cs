@@ -16,8 +16,7 @@ namespace prototype_server
         
         public static void Main(string[] args)
         {
-            var config = AppConfiguration.Initialize(args);
-            var serviceConfig = ServiceConfiguration.Initialize(config);
+            var serviceConfig = ServiceConfiguration.Initialize(args);
             
             var program = new Program(serviceConfig);
             
@@ -29,11 +28,11 @@ namespace prototype_server
         
         private Program(ServiceConfiguration serviceConfig)
         {
-            _logService = serviceConfig.SharedServices.Log;
-            _relayService = serviceConfig.SharedServices.Relay;
-            _storageService = serviceConfig.SharedServices.Storage;
+            var sharedServices = serviceConfig.SharedServices;
             
-            _storageService.ConfigureStorage();
+            _logService = sharedServices.Log;
+            _relayService = sharedServices.Relay;
+            _storageService = sharedServices.Storage;
             
             _routes = new Routes(serviceConfig);
             
@@ -42,12 +41,13 @@ namespace prototype_server
         
         private void Start()
         {
+            _storageService.ConfigureStorage();
             _routes.Start();
         }
         
         private void FixedUpdate()
         {
-            while (_relayService.NetManager.IsRunning)
+            while (_relayService.IsNetManagerRunning)
             {
                 _routes.FixedUpdate();
                 

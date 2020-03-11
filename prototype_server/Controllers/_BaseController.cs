@@ -1,11 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
+using System;
 
 using MessagePack.Resolvers;
 
 using prototype_config;
+using prototype_models;
+using prototype_serializers.JSON;
 using prototype_services;
-using prototype_storage;
 using prototype_services.Interfaces;
 
 namespace prototype_server.Controllers
@@ -17,25 +17,24 @@ namespace prototype_server.Controllers
     
     public abstract class _BaseController : IController
     {
-        protected Contexts Contexts;
-        protected ISharedServiceCollection Services;
+        protected readonly Contexts Contexts;
+        protected readonly ISharedServiceCollection Services;
+        protected readonly SerializerConfiguration SerializerConfig;
         
         protected readonly ILogService LogService;
         protected readonly IRelayService RelayService;
         protected readonly ICrudService CrudService;
         
-        protected readonly IConfiguration Config;
-        
         protected _BaseController()
         {
             Contexts = Contexts.sharedInstance;
-            Services = ServiceConfiguration.Initialize().SharedServices;
+            Services = ServiceConfiguration.SharedInstance.SharedServices;
+            
+            SerializerConfig = SerializerConfiguration.Initialize();
             
             LogService = Services.Log;
             CrudService = Services.Crud;
             RelayService = Services.Relay;
-            
-            Config = AppConfiguration.SharedInstance;
             
             LogService.LogScope = this;
             
@@ -43,6 +42,36 @@ namespace prototype_server.Controllers
                 false,
                 CustomTypeResolver.Instance
             );
+        }
+        
+        public void StoreAppData()
+        {
+            var relayServer = new RelayServerModel
+            {
+                UdpHostIpv4 = RelayService.UdpHostIpv4,
+                UdpHostIpv6 = RelayService.UdpHostIpv6,
+                UdpPort = RelayService.UdpPort
+            };
+            
+            var reqData = JsonSerializer.ToJson(relayServer, new []
+            {
+                "action_type",
+                "object_type",
+                "id",
+                "is_local"
+            });
+            
+            var postRes = CrudService.RequestStringAsync(
+                $"{ContentApiEndpoints.RELAY_SERVERS}",
+                reqData
+            ).Result;
+            
+            RelayService.UdpConnKey = JsonSerializer.FromJson<RelayServerModel>(postRes)?.UdpConnKey;
+
+            if (RelayService.UdpConnKey != null) return;
+            
+            LogService.LogError("Server is shutting down as \"UDPConnectionKey\" was not generated!");
+            Environment.Exit(6);
         }
     }
 }

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 
 using prototype_config;
 using prototype_services.Common.Network;
@@ -23,13 +22,11 @@ namespace prototype_server
         
         public void Start()
         {
-            var ipv4 = "192.168.0.13";
-            var ipv6 = "::1";
-            var port = 15000;
-            
-            if (RelayService.NetManager.Start(ipv4, ipv6, port))
+            if (RelayService.StartNetManager())
             {
-                LogService.Log($"Server started listening on port {port}");
+                LogService.Log($"Server started listening on port {RelayService.UdpPort}");
+                
+                _gameCtrl.StoreAppData();
                 _gameCtrl.Start();
             }
             else

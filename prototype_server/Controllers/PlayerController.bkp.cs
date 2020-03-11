@@ -16,7 +16,7 @@ namespace prototype_server.Controllers
     public class PlayerController : ApplicationController
     {
         private readonly Dictionary<long, PlayerModel> _playersDictionary;
-        private readonly SerializerConfiguration _serializerConfig;
+        private readonly SerializerConfiguration _serializerConfig = null;
         private readonly Dictionary<HttpHeaderFields, string> _httpHeaders;
         
         private PacketTypes _packetType;
@@ -30,19 +30,17 @@ namespace prototype_server.Controllers
         {
             _playersDictionary = new Dictionary<long, PlayerModel>();
             
-            _serializerConfig = SerializerConfiguration.Initialize(IsSerialized);
-            
 #if DEBUG
-            const string httpHostAddress = "127.0.0.1";
-            const int httpHostPort = 3000;
-            const bool isHttpSecure = true;
+            // const string httpHostAddress = "127.0.0.1";
+            // const int httpHostPort = 3000;
+            // const bool isHttpSecure = true;
 #else
             const string httpHostAddress = "127.0.0.1";
             const int httpHostPort = 3000;
             const bool isHttpSecure = true;
 #endif
             
-            CrudService.SetupClient(httpHostAddress, httpHostPort, isHttpSecure);
+            CrudService.SetupClient();
             
             _httpHeaders = new Dictionary<HttpHeaderFields, string>
             {
@@ -426,7 +424,7 @@ namespace prototype_server.Controllers
             if (_playerIdle || _syncCount >= _playersDictionary.Count) return;
             
             LogService.Log(
-                $"{(IsSerialized ? "" : "Un-")}Serialized " + 
+                $"{(_serializerConfig.IsActive ? "" : "Un-")}Serialized " + 
                 $"{_packetType} RawDataSize: {dataWriter.Length + headerSize}"
             );
             

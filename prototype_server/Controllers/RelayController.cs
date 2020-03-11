@@ -14,7 +14,6 @@ namespace prototype_server.Controllers
 {
     public class RelayController : ApplicationController, INetEventListenerAdapter
     {
-        private readonly SerializerConfiguration _serializerConfig;
         private readonly ActionContext _actionContext;
         
         private ActionEntity _actionEntity;
@@ -22,13 +21,8 @@ namespace prototype_server.Controllers
         public RelayController()
         {
             _actionContext = Contexts.action;
-            _serializerConfig = SerializerConfiguration.Initialize(IsSerialized);
             
-            var httpHostAddress = Config["HTTP_HOST"];
-            var httpHostPort = int.Parse(Config["HTTP_PORT"]);
-            var isHttpSecure = Config.IsConfigActive("HTTP_SECURE");
-            
-            CrudService.SetupClient(httpHostAddress, httpHostPort, isHttpSecure);
+            CrudService.SetupClient();
             
             LogService.LogScope = this;
         }
@@ -89,7 +83,7 @@ namespace prototype_server.Controllers
             
             var minRequiredSize = headerSize + // 3 bytes
                                   sizeof(PacketTypes) + // 4 bytes
-                                  _serializerConfig.GetExpectedStateSize(); // 21 bytes
+                                  SerializerConfig.GetExpectedStateSize(); // 21 bytes
             
             var reader = RelayService.GetPacketReader(packetReader);
             
@@ -100,7 +94,7 @@ namespace prototype_server.Controllers
             var packetType = RelayService.GetPacketType(reader); // 4 bytes
             
             LogService.Log(
-                $"{(IsSerialized ? "" : "Un-")}Serialized " + 
+                $"{(SerializerConfig.IsActive ? "" : "Un-")}Serialized " + 
                 $"{packetType} RawDataSize: {reader.RawDataSize}"
             );
             
@@ -140,7 +134,7 @@ namespace prototype_server.Controllers
                  * - Relay Server (HTTP Request on application start)
                  * - Clients (HTTP Request on Preload Session) 
                  */
-                if (request.AcceptIfKey(Config["UDP_CONN_KEY"]) != null) return;
+                if (request.AcceptIfKey(RelayService.UdpConnKey) != null) return;
                 
                 LogService.LogError(
                     $"UDP Connection Key Mismatch on client: " +
@@ -188,7 +182,7 @@ namespace prototype_server.Controllers
         
         private IEnumerable<IModel> SetStates(PacketTypes packetType, byte[] stateBytes)
         {
-            var statesCount = stateBytes.Length / _serializerConfig.GetExpectedStateSize(packetType);
+            var statesCount = stateBytes.Length / SerializerConfig.GetExpectedStateSize(packetType);
             
             switch (packetType)
             {
