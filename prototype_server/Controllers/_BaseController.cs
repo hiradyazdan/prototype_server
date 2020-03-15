@@ -15,7 +15,7 @@ namespace prototype_server.Controllers
         
     }
     
-    public abstract class _BaseController : IController
+    public class _BaseController : IController
     {
         protected readonly Contexts Contexts;
         protected readonly ISharedServiceCollection Services;
@@ -30,18 +30,15 @@ namespace prototype_server.Controllers
             Contexts = Contexts.sharedInstance;
             Services = ServiceConfiguration.SharedInstance.SharedServices;
             
-            SerializerConfig = SerializerConfiguration.Initialize();
+            SerializerConfig = SerializerConfiguration.Initialize().RegisterResolvers(
+                CustomTypeResolver.Instance
+            );
             
             LogService = Services.Log;
             CrudService = Services.Crud;
             RelayService = Services.Relay;
             
             LogService.LogScope = this;
-            
-            SerializerConfiguration.RegisterMessagePackResolvers(
-                false,
-                CustomTypeResolver.Instance
-            );
         }
         
         public void StoreAppData()

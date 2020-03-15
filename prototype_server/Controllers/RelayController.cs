@@ -92,15 +92,14 @@ namespace prototype_server.Controllers
                 reader.RawDataSize < minRequiredSize) return;
             
             var packetType = RelayService.GetPacketType(reader); // 4 bytes
+            var stateBytes = reader.GetRemainingBytes();
             
             LogService.Log(
                 $"{(SerializerConfig.IsActive ? "" : "Un-")}Serialized " + 
                 $"{packetType} RawDataSize: {reader.RawDataSize}"
             );
             
-            var states = SetStates(packetType, reader.GetRemainingBytes());
-            
-            SetEntities(netPeer, packetType, states);
+            SetEntities(netPeer, packetType, stateBytes);
         }
         
         public void OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, object reader, UnconnectedMessageTypes messageType)
@@ -148,8 +147,10 @@ namespace prototype_server.Controllers
             }
         }
         
-        private void SetEntities(object netPeer, PacketTypes packetType, IEnumerable<IModel> states)
+        private void SetEntities(object netPeer, PacketTypes packetType, byte[] stateBytes)
         {
+            var states = GetStates(packetType, stateBytes);
+            
             foreach (var state in states)
             {
                 _actionEntity = _actionContext.CreateEntity();
@@ -180,7 +181,7 @@ namespace prototype_server.Controllers
             }
         }
         
-        private IEnumerable<IModel> SetStates(PacketTypes packetType, byte[] stateBytes)
+        private IEnumerable<IModel> GetStates(PacketTypes packetType, byte[] stateBytes)
         {
             var statesCount = stateBytes.Length / SerializerConfig.GetExpectedStateSize(packetType);
             
